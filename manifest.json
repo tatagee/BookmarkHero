@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "BookmarkHero - 智能书签管理",
+  "version": "1.0.0",
+  "description": "你的数字记忆助手。智能检测死链、清理空文件夹、合并重复书签。",
+  "permissions": [
+    "bookmarks",
+    "sidePanel",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background/index.ts",
+    "type": "module"
+  },
+  "side_panel": {
+    "default_path": "src/sidepanel/index.html"
+  },
+  "options_page": "src/options/index.html",
+  "action": {
+    "default_popup": "src/popup/index.html"
+  }
+}
