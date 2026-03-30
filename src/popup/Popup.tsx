@@ -12,7 +12,7 @@ export default function Popup() {
           onClick={openOptions}
           className="bg-primary text-primary-foreground py-2 px-4 rounded hover:bg-primary/90 transition-colors"
         >
-          ⚙️ Open Dashboard
+          ⚙️ 打开控制台
         </button>
       </div>
     </div>

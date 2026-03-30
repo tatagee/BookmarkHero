@@ -1,9 +1,51 @@
+import { useEffect } from 'react';
+import { useBookmarkStore } from '../stores/bookmark.store';
+import { Button } from '../components/ui/button';
+import { ScannerPanel } from '../components/dashboard/ScannerPanel';
 
 export default function SidePanel() {
+  const { refreshBookmarks, isLoading, error } = useBookmarkStore();
+
+  useEffect(() => {
+    refreshBookmarks();
+  }, [refreshBookmarks]);
+
+  const openOptions = () => {
+    chrome.runtime.openOptionsPage();
+  };
+
   return (
-    <div className="p-4 bg-background min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">🦸 BookmarkHero</h1>
-      <p className="text-muted-foreground">This is the side panel view.</p>
+    <div className="flex flex-col h-screen bg-background text-foreground">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b bg-card">
+        <h1 className="text-lg font-bold flex items-center gap-2">
+          <span className="text-2xl drop-shadow-sm">🦸</span> BookmarkHero
+        </h1>
+        <Button variant="outline" size="sm" onClick={openOptions} className="shadow-sm">
+          ⚙️ 大屏统计
+        </Button>
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="text-muted-foreground animate-pulse text-sm">正在加载书签...</div>
+          </div>
+        ) : error ? (
+          <div className="text-destructive text-sm bg-destructive/10 p-4 rounded-lg flex items-start gap-2 border border-destructive/20">
+            <span className="text-lg">⚠️</span>
+            <p>{error}</p>
+          </div>
+        ) : (
+          <div className="animate-in fade-in duration-500">
+            <ScannerPanel />
+            <div className="mt-8 text-center text-xs text-muted-foreground border-t pt-4">
+               使用“大屏统计”以获取完整数据看板体验 :)
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
