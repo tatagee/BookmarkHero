@@ -1,8 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "BookmarkHero - 智能书签管理",
+  "name": "__MSG_appName__",
   "version": "1.0.0",
-  "description": "你的数字记忆助手。智能检测死链、清理空文件夹、合并重复书签。",
+  "description": "__MSG_appDesc__",
+  "default_locale": "en",
+  "homepage_url": "https://github.com/lyon/BookmarkHero",
+  "minimum_chrome_version": "120",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
   "permissions": [
     "bookmarks",
     "sidePanel",
@@ -26,6 +32,19 @@
   },
   "options_page": "src/options/index.html",
   "action": {
-    "default_popup": "src/popup/index.html"
+    "default_popup": "src/popup/index.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "commands": {
+    "_execute_side_panel": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B",
+        "mac": "Command+Shift+B"
+      },
+      "description": "Open BookmarkHero Side Panel"
+    }
   }
 }

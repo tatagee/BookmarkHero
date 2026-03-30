@@ -1,0 +1,10 @@
+{
+  "appName": {
+    "message": "BookmarkHero",
+    "description": "The name of the extension"
+  },
+  "appDesc": {
+    "message": "Your smart bookmark doctor. Detect dead links, clean empty folders, and find duplicates in one click.",
+    "description": "The description of the extension"
+  }
+}

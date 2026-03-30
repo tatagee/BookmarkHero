@@ -9,8 +9,8 @@
 
 import type { DeadLinkCheckPayload, DeadLinkResultPayload, UrlCheckResult } from '../shared/messages';
 
-// 让点击插件图标时打开 Side Panel（取消注释即可启用）
-// chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
+// 让点击插件图标时打开 Side Panel
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
 console.log('[BookmarkHero] Background service worker started.');
 
@@ -46,6 +46,10 @@ async function checkUrlAlive(
       method: 'GET',
       redirect: 'follow',
       signal: getController.signal,
+      headers: {
+        'Range': 'bytes=0-1023', // P1-3 优化: 只验证连通性
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 BookmarkHero/1.0',
+      },
     });
     clearTimeout(getTimer);
 

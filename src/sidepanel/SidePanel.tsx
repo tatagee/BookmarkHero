@@ -4,7 +4,10 @@ import { Button } from '../components/ui/button';
 import { ScannerPanel } from '../components/dashboard/ScannerPanel';
 
 export default function SidePanel() {
-  const { refreshBookmarks, isLoading, error } = useBookmarkStore();
+  const refreshBookmarks = useBookmarkStore(state => state.refreshBookmarks);
+  const isLoading = useBookmarkStore(state => state.isLoading);
+  const error = useBookmarkStore(state => state.error);
+  const stats = useBookmarkStore(state => state.stats);
 
   useEffect(() => {
     refreshBookmarks();
@@ -39,6 +42,19 @@ export default function SidePanel() {
           </div>
         ) : (
           <div className="animate-in fade-in duration-500">
+            {/* 顶栏迷你看板 */}
+            <div className="group flex justify-around p-3 mb-6 bg-muted/30 border rounded-lg text-sm text-center">
+              <div>
+                 <p className="text-muted-foreground text-xs mb-1">书签总量</p>
+                 <p className="font-semibold text-primary">{stats?.totalBookmarks || 0}</p>
+              </div>
+              <div className="w-px bg-border/50 hidden md:block"></div>
+              <div>
+                 <p className="text-muted-foreground text-xs mb-1">文件夹数</p>
+                 <p className="font-semibold text-primary">{stats?.totalFolders || 0}</p>
+              </div>
+            </div>
+
             <ScannerPanel />
             <div className="mt-8 text-center text-xs text-muted-foreground border-t pt-4">
                使用“大屏统计”以获取完整数据看板体验 :)

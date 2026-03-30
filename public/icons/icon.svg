@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- 渐变背景 -->
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#9333EA" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  
+  <!-- 圆角矩形底板 -->
+  <rect width="128" height="128" rx="28" fill="url(#bg)" />
+  
+  <!-- 内部白色盾牌/书签衬底 -->
+  <path d="M40 24 h48 a12 12 0 0 1 12 12 v68 l-36 -16 l-36 16 v-68 a12 12 0 0 1 12 -12 z" fill="#FFFFFF" fill-opacity="0.95" filter="url(#shadow)" />
+  
+  <!-- Emoji 核心 -->
+  <text x="64" y="80" font-family="system-ui, -apple-system, sans-serif" font-size="48" text-anchor="middle" font-weight="bold">🦸</text>
+</svg>

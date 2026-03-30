@@ -1,5 +1,5 @@
 import type { IScanner, ScanResult, ScanIssue, ScanProgress, ScanOptions } from './types';
-import { flatBookmarks } from '../utils/bookmark-tree';
+import { traverseBookmarkTree } from '../utils/bookmark-tree';
 import { ConcurrencyQueue } from '../utils/concurrency';
 import { SCAN_CONFIG } from '../../shared/constants';
 import type { DeadLinkCheckPayload, DeadLinkResultPayload } from '../../shared/messages';
@@ -73,9 +73,20 @@ export class DeadLinkScanner implements IScanner {
     const startTime = Date.now();
     const issues: ScanIssue[] = [];
 
-    // 收集所有需要扫描的书签
-    const bookmarks = flatBookmarks(nodes).filter(b => b.url && !this.isIgnoredUrl(b.url, options));
-    const total = bookmarks.length;
+    // 用带路径的遍历收集所有书签，保留文件夹路径供 UI 展示
+    const bookmarksWithPaths: { node: chrome.bookmarks.BookmarkTreeNode; folderPath: string }[] = [];
+    await traverseBookmarkTree(nodes, {
+      onBookmark: (node, path) => {
+        if (node.url && !this.isIgnoredUrl(node.url, options)) {
+          bookmarksWithPaths.push({
+            node,
+            folderPath: path.length > 0 ? path.join(' / ') : '书签栏根目录',
+          });
+        }
+      },
+    });
+
+    const total = bookmarksWithPaths.length;
 
     if (total === 0) {
       if (onProgress) onProgress({ scannerId: this.id, total: 1, current: 1, message: '没有需要检测的书签' });
@@ -89,7 +100,7 @@ export class DeadLinkScanner implements IScanner {
     let scannedCount = 0;
 
     // 为每个需要检测的书签创建一个入队的 Promise
-    const checkPromises = bookmarks.map(bookmark => {
+    const checkPromises = bookmarksWithPaths.map(({ node: bookmark, folderPath }) => {
       return queue.run(async () => {
         if (this.isCancelled) return;
         
@@ -118,7 +129,8 @@ export class DeadLinkScanner implements IScanner {
               severity: 'error',
               message,
               suggestedAction: 'delete',
-              data: { statusCode: urlResult.statusCode, error: urlResult.error },
+              // 新增 folderPath，方便用户定位书签位置
+              data: { statusCode: urlResult.statusCode, error: urlResult.error, folderPath },
             });
           }
 

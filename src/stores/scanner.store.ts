@@ -32,6 +32,11 @@ export interface ScannerState {
    * 清除某个扫瞄器缓存在视图上的执行结果
    */
   clearResults: (scannerId: string) => void;
+  
+  /**
+   * 从某个扫描器的结果中移除单条 issue（用户手动删除书签后调用）
+   */
+  removeIssue: (scannerId: string, issueId: string) => void;
 }
 
 export const useScannerStore = create<ScannerState>((set, get) => ({
@@ -104,6 +109,28 @@ export const useScannerStore = create<ScannerState>((set, get) => ({
       const newResults = { ...state.results };
       delete newResults[scannerId];
       return { results: newResults };
+    });
+  },
+  
+  removeIssue: (scannerId, issueId) => {
+    set((state) => {
+      const result = state.results[scannerId];
+      if (!result) return state;
+      
+      const newIssues = result.issues.filter(i => i.id !== issueId);
+      return {
+        results: {
+          ...state.results,
+          [scannerId]: {
+            ...result,
+            issues: newIssues,
+            stats: {
+              ...result.stats,
+              issuesFound: newIssues.length,
+            }
+          }
+        }
+      };
     });
   }
 }));
