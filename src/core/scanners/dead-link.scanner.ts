@@ -1,5 +1,6 @@
 import type { IScanner, ScanResult, ScanIssue, ScanProgress, ScanOptions } from './types';
 import { flatBookmarks } from '../utils/bookmark-tree';
+import { ConcurrencyQueue } from '../utils/concurrency';
 import { SCAN_CONFIG } from '../../shared/constants';
 import type { DeadLinkCheckPayload, DeadLinkResultPayload } from '../../shared/messages';
 
@@ -81,38 +82,30 @@ export class DeadLinkScanner implements IScanner {
       return { scannerId: this.id, issues: [], stats: { totalScanned: 0, issuesFound: 0, duration: Date.now() - startTime } };
     }
 
-    // 分批提交给 Background，每批 BATCH_SIZE 个，避免单次消息体过大
-    // 优先使用用户在 settings 里设置的并发参数
+    // 弃用之前的按批次分块 (BATCH_SIZE) 处理
+    // 改用 ConcurrencyQueue 实现精确的滑动窗口并发调度，避免慢链接阻塞整批
     const effectiveConcurrency = options?.maxConcurrency ?? SCAN_CONFIG.MAX_CONCURRENCY;
-    const BATCH_SIZE = effectiveConcurrency * 4; // 如: 5 * 4 = 20个一批
+    const queue = new ConcurrencyQueue(effectiveConcurrency);
     let scannedCount = 0;
 
-    for (let i = 0; i < bookmarks.length; i += BATCH_SIZE) {
-      if (this.isCancelled) break;
-
-      const batch = bookmarks.slice(i, i + BATCH_SIZE);
-      const batchUrls = batch.map(b => ({ bookmarkId: b.id, url: b.url! }));
-
-      if (onProgress) {
-        onProgress({
-          scannerId: this.id,
-          total,
-          current: scannedCount,
-          message: `正在发送第 ${Math.floor(i / BATCH_SIZE) + 1} 批 (共 ${Math.ceil(total / BATCH_SIZE)} 批)...`,
-        });
-      }
-
-      try {
-        // 委派给 background 执行真实网络请求
-        const result = await checkUrlsViaBackground(batchUrls, SCAN_CONFIG.HEAD_TIMEOUT_MS);
-
-        for (const urlResult of result.results) {
-          if (this.isCancelled) break;
+    // 为每个需要检测的书签创建一个入队的 Promise
+    const checkPromises = bookmarks.map(bookmark => {
+      return queue.run(async () => {
+        if (this.isCancelled) return;
+        
+        try {
+          // 只把当前的单个 URL 交给 Background 测活
+          const result = await checkUrlsViaBackground(
+            [{ bookmarkId: bookmark.id, url: bookmark.url! }], 
+            SCAN_CONFIG.HEAD_TIMEOUT_MS
+          );
+          
+          if (this.isCancelled) return;
+          
           scannedCount++;
+          const urlResult = result.results[0]; // 只有一个结果
 
           if (!urlResult.alive) {
-            // 找到原始书签以获取 title 等信息
-            const bm = batch.find(b => b.id === urlResult.bookmarkId);
             let message = '链接失效';
             if (urlResult.error === 'TIMEOUT') message = '访问超时';
             else if (urlResult.statusCode) message = `请求失败 (HTTP ${urlResult.statusCode})`;
@@ -120,17 +113,16 @@ export class DeadLinkScanner implements IScanner {
             issues.push({
               id: `deadlink-${urlResult.bookmarkId}`,
               bookmarkId: urlResult.bookmarkId,
-              bookmarkTitle: bm?.title || '无标题书签',
+              bookmarkTitle: bookmark.title || '无标题书签',
               bookmarkUrl: urlResult.url,
               severity: 'error',
               message,
               suggestedAction: 'delete',
               data: { statusCode: urlResult.statusCode, error: urlResult.error },
             });
-          } else {
-            // 链接正常，仅计数
           }
 
+          // 发送 UI 刷新（每检测够设定数量刷新一次界面避免过度重绘）
           if (onProgress && scannedCount % 5 === 0) {
             onProgress({
               scannerId: this.id,
@@ -139,13 +131,16 @@ export class DeadLinkScanner implements IScanner {
               message: `已检测 ${scannedCount} / ${total}`,
             });
           }
+        } catch (err) {
+          if (this.isCancelled) return;
+          console.error('[DeadLinkScanner] Single check failed:', err);
+          scannedCount++; // 即使失败内部代码错误也按扫过处理，免得长久卡死进度条
         }
-      } catch (err) {
-        console.error('[DeadLinkScanner] Batch check failed, skipping batch:', err);
-        // 单批失败不中断整个扫描，记录跳过的数量
-        scannedCount += batch.length;
-      }
-    }
+      });
+    });
+
+    // 等待滑动窗口中的所有任务跑完
+    await Promise.all(checkPromises);
 
     if (onProgress) {
       onProgress({ scannerId: this.id, total, current: total, message: '死链体检完成！' });

@@ -11,7 +11,16 @@ export class DeleteAction implements IAction {
    */
   async execute(params: ActionParams): Promise<UndoInfo | null> {
     try {
-      const nodes = await getBookmark(params.bookmarkId);
+      let nodes: chrome.bookmarks.BookmarkTreeNode[] | undefined;
+      try {
+        nodes = await getBookmark(params.bookmarkId);
+      } catch (err: unknown) {
+        // 如果在批量操作时，父文件夹被提前删除，子系统会通过抛错反映。
+        // 在这里静默吞下并返回 null，当作已经删除完成。
+        console.warn(`[DeleteAction] Bookmark ${params.bookmarkId} not found or already deleted.`, err);
+        return null;
+      }
+      
       if (!nodes || nodes.length === 0) return null;
       
       const node = nodes[0];

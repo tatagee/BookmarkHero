@@ -5,7 +5,6 @@ import type {
   ScanProgress, 
   ScanOptions 
 } from './types';
-import { getTreeDepth } from '../utils/bookmark-tree';
 
 export class EmptyFolderScanner implements IScanner {
   public id = 'empty-folder-scanner';
@@ -59,8 +58,9 @@ export class EmptyFolderScanner implements IScanner {
             });
         }
         
-        // 判断条件: 该文件夹直接深度为 0, 或者是"实质空" (子节点也没有任何包含 url 的项)
-        const isEmpty = getTreeDepth([folder]) === 0 || this.isSubTreeEmpty(folder);
+        // 判断条件: 该文件夹下没有任何包含实际 url 链接的节点
+        // isSubTreeEmpty 会递归到底层，确认全节点都没 url，如果一个 url 都没有则代表其是"实质空"
+        const isEmpty = this.isSubTreeEmpty(folder);
         
         if (isEmpty) {
             issues.push({
