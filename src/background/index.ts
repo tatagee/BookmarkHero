@@ -9,7 +9,7 @@
 
 import type { DeadLinkCheckPayload, DeadLinkResultPayload, UrlCheckResult } from '../shared/messages';
 import { ClassificationService } from '../core/services/classification.service';
-import { moveBookmark } from '../shared/chrome-api';
+import { moveBookmark, ensureFolderExists } from '../shared/chrome-api';
 
 // 让点击插件图标时打开 Side Panel
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
@@ -121,15 +121,25 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
     const service = new ClassificationService();
     const res = await service.classify({ title: bookmark.title, url: bookmark.url });
     
-    // 如果找不到精确匹配，提示
-    if (res.suggestedFolderId === 'fallback_id_or_create_new') {
+    // 如果 AI 认为当前位置合理，不需要移动
+    if (res.action === 'keep') {
       return; 
+    }
+
+    // 如果找不到精确匹配的 folderId，尝试自动创建
+    let targetFolderId = res.suggestedFolderId;
+    if (targetFolderId === 'fallback_id_or_create_new' || targetFolderId === 'fallback') {
+      try {
+        targetFolderId = await ensureFolderExists(res.suggestedFolderPath);
+      } catch {
+        return; // 创建失败就静默退出
+      }
     }
 
     const notifId = `classify-${id}-${Date.now()}`;
     classificationResults.set(notifId, {
       bookmarkId: id,
-      folderId: res.suggestedFolderId,
+      folderId: targetFolderId,
       folderPath: res.suggestedFolderPath
     });
 

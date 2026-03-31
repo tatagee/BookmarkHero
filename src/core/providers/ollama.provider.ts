@@ -33,25 +33,36 @@ export class OllamaProvider implements IAIProvider {
   }
 
   async classify(
-    bookmark: { title: string; url: string },
+    bookmark: { title: string; url: string; currentPath?: string },
     existingFolders: { id: string; path: string }[]
   ): Promise<ClassificationResult> {
     const { ollamaUrl, ollamaModel } = useSettingsStore.getState();
 
     const folderListStr = existingFolders.map((f) => `- ${f.path}`).join('\n');
-    const prompt = `你是一个书签分类助手。从用户已有的文件夹中选择最合适的分类目标。
+    const currentLocation = bookmark.currentPath
+      ? `当前所在位置：${bookmark.currentPath}`
+      : '当前所在位置：未分类（根目录）';
+
+    const prompt = `你是一个书签分类助手。请根据书签的标题、URL 和当前位置，判断该书签是否放在了合理的位置。
+
 用户已有文件夹：
 ${folderListStr}
 
-待分类书签：
+待审查书签：
 标题：${bookmark.title}
 URL：${bookmark.url}
+${currentLocation}
+
+判断规则：
+1. 如果当前位置已经合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径
+2. 如果当前位置不合理 → action 设为 "move"，suggestedFolderPath 设为建议路径
 
 请严格仅以JSON格式输出，不带markdown块：
 {
+  "action": "keep 或 move",
   "suggestedFolderPath": "最合适的文件夹路径",
   "confidence": 0.0~1.0,
-  "reasoning": "简短分类理由",
+  "reasoning": "简短判断理由",
   "alternatives": [{"path": "备选1", "confidence": 0.0~1.0}]
 }`;
 
@@ -64,7 +75,7 @@ URL：${bookmark.url}
           prompt,
           stream: false,
           format: 'json',
-          options: { temperature: 0.2 }, // 降低随机性
+          options: { temperature: 0.2 },
         }),
       });
 
@@ -74,7 +85,7 @@ URL：${bookmark.url}
 
       const data = await resp.json();
       const parsed = JSON.parse(data.response);
-      return this.validateResponse(parsed, existingFolders);
+      return this.validateResponse(parsed, existingFolders, bookmark.currentPath);
     } catch (error) {
       console.error('[OllamaProvider] Classify error:', error);
       throw new Error(`Ollama 分类失败: ${error instanceof Error ? error.message : String(error)}`);
@@ -82,7 +93,7 @@ URL：${bookmark.url}
   }
 
   async classifyBatch(
-    bookmarks: { id: string; title: string; url: string }[],
+    bookmarks: { id: string; title: string; url: string; currentPath?: string }[],
     existingFolders: { id: string; path: string }[]
   ): Promise<Map<string, ClassificationResult>> {
     const results = new Map<string, ClassificationResult>();
@@ -99,14 +110,25 @@ URL：${bookmark.url}
 
   private validateResponse(
     parsed: Record<string, unknown>,
-    folders: { id: string; path: string }[]
+    folders: { id: string; path: string }[],
+    currentPath?: string,
   ): ClassificationResult {
-    const suggestedFolderPath = parsed.suggestedFolderPath || '';
+    const action = parsed.action === 'keep' ? 'keep' : 'move';
+    const suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
     const matchedFolder = folders.find((f) => f.path === suggestedFolderPath);
     
+    let finalFolderId: string;
+    if (action === 'keep' && currentPath) {
+      const currentFolder = folders.find((f) => f.path === currentPath);
+      finalFolderId = currentFolder ? currentFolder.id : 'keep';
+    } else {
+      finalFolderId = matchedFolder ? matchedFolder.id : 'fallback';
+    }
+
     return {
-      suggestedFolderId: matchedFolder ? matchedFolder.id : 'fallback',
-      suggestedFolderPath: matchedFolder ? matchedFolder.path : (suggestedFolderPath as string),
+      action,
+      suggestedFolderId: finalFolderId,
+      suggestedFolderPath: matchedFolder ? matchedFolder.path : suggestedFolderPath,
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
       reasoning: (parsed.reasoning as string) || '',
       alternativeFolders: Array.isArray(parsed.alternatives)

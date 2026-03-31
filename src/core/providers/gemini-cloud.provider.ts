@@ -28,7 +28,7 @@ export class GeminiCloudProvider implements IAIProvider {
   }
 
   async classify(
-    bookmark: { title: string; url: string },
+    bookmark: { title: string; url: string; currentPath?: string },
     existingFolders: { id: string; path: string }[]
   ): Promise<ClassificationResult> {
     const { geminiApiKey, geminiModel } = useSettingsStore.getState();
@@ -52,7 +52,7 @@ export class GeminiCloudProvider implements IAIProvider {
       const responseText = result.response.text();
       const parsed = JSON.parse(responseText);
 
-      return this.validateResponse(parsed, existingFolders);
+      return this.validateResponse(parsed, existingFolders, bookmark.currentPath);
     } catch (error) {
       console.error('[GeminiCloudProvider] Classify error:', error);
       throw new Error(`分类失败: ${error instanceof Error ? error.message : String(error)}`);
@@ -60,10 +60,9 @@ export class GeminiCloudProvider implements IAIProvider {
   }
 
   async classifyBatch(
-    bookmarks: { id: string; title: string; url: string }[],
+    bookmarks: { id: string; title: string; url: string; currentPath?: string }[],
     existingFolders: { id: string; path: string }[]
   ): Promise<Map<string, ClassificationResult>> {
-    // 简化处理：目前逐个调用，后续可优化为 true batch 提示
     const results = new Map<string, ClassificationResult>();
     for (const b of bookmarks) {
       try {
@@ -77,33 +76,52 @@ export class GeminiCloudProvider implements IAIProvider {
   }
 
   private buildPrompt(
-    bookmark: { title: string; url: string },
+    bookmark: { title: string; url: string; currentPath?: string },
     folders: { id: string; path: string }[]
   ): string {
     const folderListStr = folders.map((f) => `- ${f.path}`).join('\n');
-    return `你是一个书签分类助手。请根据书签的标题和URL，从用户已有的文件夹中选择一个最合适的分类目标。
+    const currentLocation = bookmark.currentPath
+      ? `当前所在位置：${bookmark.currentPath}`
+      : '当前所在位置：未分类（根目录）';
+
+    return `你是一个书签分类助手。请根据书签的标题、URL 和当前所在位置，判断该书签是否放在了合理的位置。
 
 用户已有文件夹：
 ${folderListStr}
 
-待分类书签：
+待审查书签：
 标题：${bookmark.title}
 URL：${bookmark.url}
+${currentLocation}
+
+请你做出以下判断：
+1. 如果当前位置已经合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径
+2. 如果当前位置不合理（未分类、或放错了文件夹）→ action 设为 "move"，suggestedFolderPath 设为你建议的最佳路径（优先从已有文件夹中选，必要时可建议新路径）
 
 请以 JSON 格式返回，包含以下字段：
-- suggestedFolderPath: 最合适的文件夹路径（必须是上方列表中的一项）
+- action: "keep" 或 "move"
+- suggestedFolderPath: 最合适的文件夹路径（keep 时为当前路径，move 时为建议路径）
 - confidence: 0.0 到 1.0 的置信度数值
-- reasoning: 一句话分类理由
+- reasoning: 一句话判断理由
 - alternatives: 备选列表，每个元素包含 path 和 confidence（最多2个，可选）
 
-示例输出：
+示例输出（需要移动）：
 {
+  "action": "move",
   "suggestedFolderPath": "书签栏/开发资源/前端",
   "confidence": 0.95,
-  "reasoning": "该链接是关于 React 的教程，属于前端开发范畴。",
+  "reasoning": "该链接是关于 React 的教程，属于前端开发范畴，不应放在根目录。",
   "alternatives": [
     { "path": "书签栏/学习笔记", "confidence": 0.6 }
   ]
+}
+
+示例输出（位置正确）：
+{
+  "action": "keep",
+  "suggestedFolderPath": "书签栏/开发资源/前端",
+  "confidence": 0.92,
+  "reasoning": "该书签已在前端开发相关文件夹中，位置合理。"
 }`;
   }
 
@@ -112,18 +130,28 @@ URL：${bookmark.url}
    */
   private validateResponse(
     parsed: Record<string, unknown>,
-    folders: { id: string; path: string }[]
+    folders: { id: string; path: string }[],
+    currentPath?: string,
   ): ClassificationResult {
-    const suggestedFolderPath = parsed.suggestedFolderPath || '';
+    const action = parsed.action === 'keep' ? 'keep' : 'move';
+    const suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
+
     // 从给定的 folders 中找 id，防幻觉
     const matchedFolder = folders.find((f) => f.path === suggestedFolderPath);
-    
-    // 如果找不到精确匹配的，找一个最接近的，或者 fallback
-    const finalFolderId = matchedFolder ? matchedFolder.id : 'fallback_id_or_create_new';
-    
+
+    // 如果 action 是 keep，使用当前路径对应的 folder
+    let finalFolderId: string;
+    if (action === 'keep' && currentPath) {
+      const currentFolder = folders.find((f) => f.path === currentPath);
+      finalFolderId = currentFolder ? currentFolder.id : 'keep';
+    } else {
+      finalFolderId = matchedFolder ? matchedFolder.id : 'fallback_id_or_create_new';
+    }
+
     return {
+      action,
       suggestedFolderId: finalFolderId,
-      suggestedFolderPath: matchedFolder ? matchedFolder.path : (suggestedFolderPath as string),
+      suggestedFolderPath: matchedFolder ? matchedFolder.path : suggestedFolderPath,
       confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0,
       reasoning: (parsed.reasoning as string) || '',
       alternativeFolders: Array.isArray(parsed.alternatives)

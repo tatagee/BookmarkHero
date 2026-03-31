@@ -32,7 +32,7 @@ function extractFolderPaths(tree: chrome.bookmarks.BookmarkTreeNode[]): { id: st
 
 export class ClassificationService {
 
-  async classify(bookmark: { title: string; url: string }): Promise<ClassificationResult> {
+  async classify(bookmark: { title: string; url: string; currentPath?: string }): Promise<ClassificationResult> {
     const providerId = useSettingsStore.getState().activeAiProvider;
     const provider = AIProviderFactory.createProvider(providerId);
 
@@ -42,7 +42,6 @@ export class ClassificationService {
     }
 
     // Grab the current full tree to extract folders
-    // Usually this service would be given the tree, but we can fetch it here
     const tree = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve) => {
       chrome.bookmarks.getTree(resolve);
     });
