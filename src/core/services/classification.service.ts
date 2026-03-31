@@ -1,6 +1,7 @@
 import { AIProviderFactory } from '../providers';
 import type { ClassificationResult } from '../providers/types';
 import { useSettingsStore } from '../../stores/settings.store';
+import { getBookmarkTree } from '../../shared/chrome-api';
 
 /**
  * 提取并压缩现有的文件夹树，只返回路径数组
@@ -42,15 +43,8 @@ export class ClassificationService {
     }
 
     // Grab the current full tree to extract folders
-    const tree = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve) => {
-      chrome.bookmarks.getTree(resolve);
-    });
-
+    const tree = await getBookmarkTree();
     const folders = extractFolderPaths(tree);
-
-    if (folders.length === 0) {
-      throw new Error('No folders found to classify into.');
-    }
 
     // Call the active AI provider
     return provider.classify(bookmark, folders);
