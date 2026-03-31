@@ -10,6 +10,7 @@
 import type { DeadLinkCheckPayload, DeadLinkResultPayload, UrlCheckResult } from '../shared/messages';
 import { ClassificationService } from '../core/services/classification.service';
 import { moveBookmark, ensureFolderExists } from '../shared/chrome-api';
+import { getT } from '../i18n';
 
 // 让点击插件图标时打开 Side Panel
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
@@ -143,12 +144,13 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
       folderPath: res.suggestedFolderPath
     });
 
+    const t = getT();
     chrome.notifications.create(notifId, {
       type: 'basic',
       iconUrl: chrome.runtime.getURL('icons/icon128.png'), 
-      title: '📂 BookmarkHero 分类建议',
-      message: `将「${bookmark.title}」移到 "${res.suggestedFolderPath}"？`,
-      buttons: [{ title: '✅ 接受' }, { title: '❌ 忽略' }],
+      title: t('background.notify.title'),
+      message: t('background.notify.message', { title: bookmark.title, path: res.suggestedFolderPath }),
+      buttons: [{ title: t('common.accept') }, { title: t('common.ignore') }],
       requireInteraction: true // 不自动消失
     });
   } catch (err) {

@@ -5,11 +5,12 @@ import type {
   ScanProgress, 
   ScanOptions 
 } from './types';
+import { getT } from '../../i18n';
 
 export class EmptyFolderScanner implements IScanner {
   public id = 'empty-folder-scanner';
-  public name = '空文件夹清理';
-  public description = '极速检测未包含任何书签内容的空壳文件夹。';
+  public name = 'scanner.emptyFolder.name';
+  public description = 'scanner.emptyFolder.desc';
   
   private isCancelled = false;
 
@@ -22,6 +23,7 @@ export class EmptyFolderScanner implements IScanner {
     const startTime = Date.now();
     const issues: ScanIssue[] = [];
     let totalScanned = 0;
+    const t = getT();
 
     // 1. 将树结构展平，过滤出所有的 Folder 节点
     const folders: chrome.bookmarks.BookmarkTreeNode[] = [];
@@ -54,7 +56,7 @@ export class EmptyFolderScanner implements IScanner {
                 scannerId: this.id,
                 total: folders.length,
                 current: i,
-                message: `正在分析文件夹: ${folder.title || '...'}`
+                message: t('scanner.msg.emptyFolder.check', { title: folder.title || '...' })
             });
         }
         
@@ -68,7 +70,7 @@ export class EmptyFolderScanner implements IScanner {
                 bookmarkId: folder.id,
                 bookmarkTitle: folder.title || '未命名文件夹',
                 severity: 'info',
-                message: '这是一个实质为空的文件夹 (不包含任何有效网页链接)',
+                message: t('scanner.issue.emptyFolder'),
                 suggestedAction: 'delete'
             });
         }
@@ -80,7 +82,7 @@ export class EmptyFolderScanner implements IScanner {
             scannerId: this.id,
             total: folders.length,
             current: folders.length,
-            message: '文件夹扫描完成！'
+            message: t('scanner.msg.emptyFolder.done')
         });
     }
 

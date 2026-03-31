@@ -11,7 +11,10 @@ import { Play, Square, ChevronDown, X, Trash2, Loader2 } from "lucide-react";
 import type { ScanOptions, ScanIssue } from "../../core/scanners";
 import { IssueList } from "./IssueList";
 import { DeleteAction } from "../../core/actions/delete.action";
-import { ConcurrencyQueue } from "../../core/utils/concurrency";
+import { ConcurrencyQueue, chunkArray } from "../../core/utils/concurrency";
+import { checkUrlsViaBackground } from "../../core/scanners/dead-link.scanner";
+import { SCAN_CONFIG } from "../../shared/constants";
+import { useT } from "../../i18n";
 
 /** 一键清理子组件 — 内嵌在结果面板标题栏中 */
 function BatchDeleteButton({
@@ -21,6 +24,7 @@ function BatchDeleteButton({
   scannerId: string;
   issues: ScanIssue[];
 }) {
+  const t = useT();
   const batchRemoveIssues = useScannerStore(state => state.batchRemoveIssues);
   const addLog = useLogStore(state => state.addLog);
   const refreshBookmarks = useBookmarkStore(state => state.refreshBookmarks);
@@ -48,7 +52,9 @@ function BatchDeleteButton({
           addLog({
             id: `log-batch-${Date.now()}-${issue.bookmarkId}`,
             actionId: action.id,
-            description: `[批量清理] 删除了${scannerId === 'empty-folder-scanner' ? '文件夹' : '书签'}「${issue.bookmarkTitle}」`,
+            description: scannerId === 'empty-folder-scanner'
+              ? t('issueList.logDesc.folder', { title: issue.bookmarkTitle })
+              : t('issueList.logDesc.bookmark', { title: issue.bookmarkTitle }),
             undoInfo,
             bookmarkTitle: issue.bookmarkTitle,
             bookmarkUrl: issue.bookmarkUrl,
@@ -90,14 +96,14 @@ function BatchDeleteButton({
           onClick={() => setPhase('confirming')}
         >
           <Trash2 className="h-3 w-3" />
-          一键清理全部 ({issues.length})
+          {t('scanner.batchCleanBtn', { count: issues.length })}
         </Button>
       )}
 
       {phase === 'confirming' && (
         <div className="flex items-center gap-2 animate-in fade-in duration-200">
           <span className="text-xs text-destructive font-medium whitespace-nowrap">
-            ⚠️ 确认清理全部 {issues.length} 项？
+            {t('scanner.batchCleanConfirm', { count: issues.length })}
           </span>
           <Button
             variant="outline"
@@ -105,7 +111,7 @@ function BatchDeleteButton({
             className="h-7 px-3 text-xs"
             onClick={() => setPhase('idle')}
           >
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             variant="destructive"
@@ -113,7 +119,7 @@ function BatchDeleteButton({
             className="h-7 px-3 text-xs"
             onClick={handleBatchDelete}
           >
-            确认清理
+            {t('common.confirm')}
           </Button>
         </div>
       )}
@@ -123,8 +129,8 @@ function BatchDeleteButton({
           <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
           <div className="flex flex-col gap-0.5">
             <span className="text-xs font-medium">
-              已清理 {progress.done}/{progress.total}
-              {progress.failed > 0 && <span className="text-yellow-600 ml-1">失败 {progress.failed}</span>}
+              {t('scanner.batchCleanProgress', { done: progress.done, total: progress.total })}
+              {progress.failed > 0 && <span className="text-yellow-600 ml-1">{t('scanner.batchCleanFailed', { failed: progress.failed })}</span>}
             </span>
             <div className="w-32 bg-muted rounded-full h-1.5 overflow-hidden">
               <div
@@ -138,7 +144,97 @@ function BatchDeleteButton({
 
       {phase === 'done' && (
         <span className="text-xs text-emerald-600 font-medium animate-in fade-in duration-200">
-          ✅ 清理完成！
+          {t('scanner.batchCleanDone')}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** 针对死链的二次检测按钮 */
+function RecheckDeadLinksButton({
+  scannerId,
+  issues,
+}: {
+  scannerId: string;
+  issues: ScanIssue[];
+}) {
+  const t = useT();
+  const batchRemoveIssues = useScannerStore(state => state.batchRemoveIssues);
+  const [phase, setPhase] = useState<'idle' | 'checking' | 'done'>('idle');
+  const [progress, setProgress] = useState({ done: 0, total: 0, recovered: 0 });
+
+  if (scannerId !== 'dead-link-scanner' || issues.length === 0) return null;
+
+  const handleRecheck = async () => {
+    setPhase('checking');
+    const total = issues.length;
+    setProgress({ done: 0, total, recovered: 0 });
+
+    const queue = new ConcurrencyQueue(3);
+    const BATCH_SIZE = 5;
+    const batches = chunkArray(issues, BATCH_SIZE);
+    
+    let done = 0;
+    let recovered = 0;
+    const recoveredIds: string[] = [];
+
+    const tasks = batches.map(batch => async () => {
+      try {
+        const urls = batch.map(b => ({ bookmarkId: b.bookmarkId, url: b.bookmarkUrl! }));
+        // 使用针对书签体检稍长的超时时间进行复测
+        const result = await checkUrlsViaBackground(urls, SCAN_CONFIG.HEAD_TIMEOUT_MS + 5000);
+        
+        for (const urlResult of result.results) {
+          if (urlResult.alive) {
+            recoveredIds.push(`deadlink-${urlResult.bookmarkId}`);
+            recovered++;
+          }
+        }
+      } catch (err) {
+        console.error(`[Recheck] 二次检测批次失败:`, err);
+      } finally {
+        done += batch.length;
+        setProgress({ done, total, recovered });
+      }
+    });
+
+    await Promise.all(tasks.map((t) => queue.run(t)));
+
+    if (recoveredIds.length > 0) {
+      batchRemoveIssues(scannerId, recoveredIds);
+    }
+
+    setPhase('done');
+    setTimeout(() => setPhase('idle'), 3000);
+  };
+
+  return (
+    <div className="relative flex items-center mr-2">
+      {phase === 'idle' && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 text-xs gap-1 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-600 text-muted-foreground transition-colors"
+          onClick={handleRecheck}
+        >
+          <Play className="h-3 w-3" />
+          {t('scanner.recheckBtn')}
+        </Button>
+      )}
+
+      {phase === 'checking' && (
+        <div className="flex items-center gap-2 animate-in fade-in duration-200">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-emerald-500" />
+          <span className="text-xs font-medium">
+            {t('scanner.recheckProgress', { done: progress.done, total: progress.total })}
+          </span>
+        </div>
+      )}
+
+      {phase === 'done' && (
+        <span className="text-xs text-emerald-600 font-medium animate-in fade-in duration-200">
+          {t('scanner.recheckDone', { recovered: progress.recovered })}
         </span>
       )}
     </div>
@@ -164,6 +260,7 @@ export function ScannerPanel() {
       maxConcurrency: state.maxConcurrency,
     }))
   );
+  const t = useT();
 
   // 当前展开查看详情的扫描器 ID
   const [expandedScannerId, setExpandedScannerId] = useState<string | null>(null);
@@ -178,7 +275,7 @@ export function ScannerPanel() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold tracking-tight">体检工具集</h2>
+      <h2 className="text-xl font-bold tracking-tight">{t('section.scanners')}</h2>
 
       {/* 扫描器卡片网格 */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -196,7 +293,7 @@ export function ScannerPanel() {
             >
               <CardHeader className="pb-3">
                 <CardTitle className="flex justify-between items-center text-lg">
-                  {scanner.name}
+                  {t(scanner.name as any)}
                   {isThisScanning ? (
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={cancelScan}>
                       <Square className="h-4 w-4" />
@@ -213,7 +310,7 @@ export function ScannerPanel() {
                     </Button>
                   )}
                 </CardTitle>
-                <CardDescription className="line-clamp-2 text-xs">{scanner.description}</CardDescription>
+                <CardDescription className="line-clamp-2 text-xs">{t(scanner.description as any)}</CardDescription>
               </CardHeader>
 
               <CardContent>
@@ -227,9 +324,12 @@ export function ScannerPanel() {
                  {!isThisScanning && scannerResult && (
                     <div className="mt-2">
                       <div className="text-sm bg-muted/50 p-2 rounded-md">
-                        <p>发现了 <span className={scannerResult.issues.length > 0 ? "font-bold text-destructive" : "font-bold text-emerald-500"}>{scannerResult.issues.length}</span> 个问题</p>
+                        <p>{t('scanner.card.foundIssues', { count: scannerResult.issues.length })}</p>
                         <p className="text-xs text-muted-foreground pt-1">
-                           耗时: {(scannerResult.stats.duration / 1000).toFixed(1)}s (已扫 {scannerResult.stats.totalScanned} 项)
+                           {t('scanner.card.timeSpent', {
+                             time: (scannerResult.stats.duration / 1000).toFixed(1),
+                             count: scannerResult.stats.totalScanned
+                           })}
                         </p>
                       </div>
                       {/* 展开/收起详情按钮 */}
@@ -240,7 +340,7 @@ export function ScannerPanel() {
                           onClick={() => setExpandedScannerId(isExpanded ? null : scanner.id)}
                           className="w-full justify-center text-xs h-7 mt-2 hover:bg-primary/10"
                         >
-                          {isExpanded ? "收起详情" : "查看问题详情"}
+                          {isExpanded ? t('scanner.card.collapse') : t('scanner.card.expand')}
                           <ChevronDown className={`ml-1 h-3 w-3 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`} />
                         </Button>
                       )}
@@ -263,12 +363,17 @@ export function ScannerPanel() {
           {/* 面板标题栏 */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold">{expandedScanner.name} — 问题详情</h3>
+              <h3 className="text-sm font-semibold">{t('scanner.detail.title', { name: t(expandedScanner.name as any) })}</h3>
               <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                {expandedResult.issues.length} 项
+                {t('scanner.detail.count', { count: expandedResult.issues.length })}
               </span>
             </div>
             <div className="flex items-center gap-3">
+              {/* 二次检测复测按钮（仅死链体检显示） */}
+              <RecheckDeadLinksButton
+                scannerId={expandedScannerId}
+                issues={expandedResult.issues}
+              />
               {/* 一键清理按钮 */}
               <BatchDeleteButton
                 scannerId={expandedScannerId}

@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useBookmarkStore } from '../stores/bookmark.store';
 import { useScannerStore } from '../stores/scanner.store';
+import { useSettingsStore, useSettingsActions } from '../stores/settings.store';
+import { useT } from '../i18n';
 import { StatsCards } from '../components/dashboard/StatsCards';
 import { ScannerPanel } from '../components/dashboard/ScannerPanel';
 import { OperationLogPanel } from '../components/dashboard/OperationLogPanel';
@@ -14,6 +16,9 @@ export default function Options() {
   const isLoading = useBookmarkStore(state => state.isLoading);
   const scanners = useScannerStore(state => state.scanners);
   const clearResults = useScannerStore(state => state.clearResults);
+  const uiLanguage = useSettingsStore(state => state.uiLanguage);
+  const actions = useSettingsActions();
+  const t = useT();
 
   useEffect(() => {
     refreshBookmarks();
@@ -32,12 +37,21 @@ export default function Options() {
         {/* 页头 */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">BookmarkHero</h1>
-            <p className="text-sm text-muted-foreground mt-1">智能分析与自动分类您的书签库。</p>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('app.title')}</h1>
+              <button
+                onClick={() => actions.setUiLanguage(uiLanguage === 'zh' ? 'en' : 'zh')}
+                className="text-xs font-medium px-2 py-0.5 rounded border bg-muted/30 hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                title={t('app.toggleLang')}
+              >
+                {t('app.langName')}
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">{t('app.subtitle')}</p>
           </div>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="shadow-sm">
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            刷新
+            {t('common.refresh')}
           </Button>
         </div>
 
@@ -45,7 +59,7 @@ export default function Options() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
             <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
-              <span className="flex items-center gap-2"><BarChart2 className="w-5 h-5 text-primary" /> 数据总览</span>
+              <span className="flex items-center gap-2"><BarChart2 className="w-5 h-5 text-primary" /> {t('section.overview')}</span>
               <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
             <div className="p-4 border-t px-6 pb-6">
@@ -55,7 +69,7 @@ export default function Options() {
 
           <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
             <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
-              <span className="flex items-center gap-2"><Settings className="w-5 h-5 text-primary" /> 引擎配置</span>
+              <span className="flex items-center gap-2"><Settings className="w-5 h-5 text-primary" /> {t('section.settings')}</span>
               <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
             </summary>
             <div className="p-4 border-t px-6 pb-6">
@@ -67,7 +81,7 @@ export default function Options() {
         {/* 旧版清理工具区 (默认折叠) */}
         <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
           <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
-            <span className="flex items-center gap-2"><Search className="w-5 h-5 text-primary" /> 常规清理 (死链/重复)</span>
+            <span className="flex items-center gap-2"><Search className="w-5 h-5 text-primary" /> {t('section.scanners')}</span>
             <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
           </summary>
           <div className="p-4 border-t pb-6">

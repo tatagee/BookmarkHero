@@ -2,19 +2,19 @@ import { useState, useEffect } from 'react';
 import { useSettingsStore, useSettingsActions } from '../../stores/settings.store';
 import { AIProviderFactory } from '../../core/providers';
 import { Button } from '../ui/button';
+import { useT } from '../../i18n';
+import { Settings2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export function AIProviderSettings() {
   const settings = useSettingsStore();
   const actions = useSettingsActions();
+  const t = useT();
   
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState('');
 
-  // Clear test state when provider changes
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTestStatus('idle');
-     
     setTestMessage('');
   }, [settings.activeAiProvider]);
 
@@ -22,7 +22,7 @@ export function AIProviderSettings() {
 
   const handleTestConnection = async () => {
     setTestStatus('testing');
-    setTestMessage('测试连接中...');
+    setTestMessage(t('settings.test.testing'));
     
     try {
       const provider = AIProviderFactory.createProvider(settings.activeAiProvider);
@@ -30,18 +30,18 @@ export function AIProviderSettings() {
       
       if (isOk) {
         setTestStatus('success');
-        setTestMessage('连接成功！AI 引擎已准备就绪。');
+        setTestMessage(t('settings.test.success'));
       } else {
         setTestStatus('error');
         setTestMessage(
           settings.activeAiProvider === 'gemini-cloud'
-            ? '连接失败，请检查 API Key 是否有效及网络状况。'
-            : '连接失败，请确认本地 Ollama 服务已启动且允许跨域请求。'
+            ? t('settings.test.failGemini')
+            : t('settings.test.failOllama')
         );
       }
     } catch (err) {
        setTestStatus('error');
-       setTestMessage(`探测出现异常: ${err instanceof Error ? err.message : String(err)}`);
+       setTestMessage(t('settings.test.failException', { err: err instanceof Error ? err.message : String(err) }));
     }
   };
 
@@ -72,15 +72,15 @@ export function AIProviderSettings() {
                 type="password" 
                 value={settings.geminiApiKey} 
                 onChange={(e) => actions.setGeminiApiKey(e.target.value)}
-                placeholder="AIzaSy..."
+                placeholder="YOUR_API_KEY"
                 className="w-full sm:max-w-md flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                密钥仅保存在您的浏览器本地，不会上传到我们的服务器。<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline hover:text-primary">获取免费 API Key</a>
+                {t('settings.gemini.keyTip')} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline hover:text-primary">{t('settings.gemini.keyLink')}</a>
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">使用模型 (Model)</label>
+              <label className="block text-sm font-medium mb-1">{t('settings.gemini.model')}</label>
               <input 
                 type="text" 
                 value={settings.geminiModel} 
@@ -89,7 +89,7 @@ export function AIProviderSettings() {
                 className="w-full sm:max-w-xs flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                推荐使用 gemini-flash-lite-latest 或 gemini-2.5-flash。
+                {t('settings.gemini.modelTip')}
               </p>
             </div>
           </div>
@@ -98,7 +98,7 @@ export function AIProviderSettings() {
         {settings.activeAiProvider === 'ollama' && (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Ollama 服务地址</label>
+              <label className="block text-sm font-medium mb-1">{t('settings.ollama.url')}</label>
               <input 
                 type="text" 
                 value={settings.ollamaUrl} 
@@ -108,7 +108,7 @@ export function AIProviderSettings() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">使用模型 (Model)</label>
+              <label className="block text-sm font-medium mb-1">{t('settings.ollama.model')}</label>
               <input 
                 type="text" 
                 value={settings.ollamaModel} 
@@ -117,62 +117,102 @@ export function AIProviderSettings() {
                 className="w-full sm:max-w-xs flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground mt-2">
-                需预先在终端执行 `ollama run 模型名`。推荐使用 llama3 或 qwen2。
+                {t('settings.ollama.modelTip')}
               </p>
             </div>
           </div>
         )}
 
-        {/* 通用分类偏好设置（与 Provider 无关） */}
-        <div className="mt-6 pt-6 border-t space-y-3">
-          <h3 className="text-sm font-medium">分类偏好</h3>
-          <div>
-            <label className="block text-sm text-muted-foreground mb-2">
-              📝 分类命名语言
-            </label>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
-              <button
-                onClick={() => actions.setCategoryLanguage('zh')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  settings.categoryLanguage === 'zh'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                中文
-              </button>
-              <button
-                onClick={() => actions.setCategoryLanguage('en')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                  settings.categoryLanguage === 'en'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                English
-              </button>
+        <div className="col-span-full border-t border-border mt-4 pt-6 space-y-6">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-primary" />
+            {t('settings.general.title')}
+          </h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-sm font-medium leading-none">
+                {t('settings.general.catLang')}
+              </label>
+              <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
+                <button
+                  onClick={() => actions.setCategoryLanguage('zh')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    settings.categoryLanguage === 'zh'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t('settings.general.catLangZh')}
+                </button>
+                <button
+                  onClick={() => actions.setCategoryLanguage('en')}
+                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    settings.categoryLanguage === 'en'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {t('settings.general.catLangEn')}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {t('settings.general.catLangTip')}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              控制 AI 建议的新文件夹使用的语言，已有文件夹名称不受影响。
-            </p>
+            
+            <div className="space-y-4">
+              <div className="flex justify-between items-center mb-1">
+                <label className="text-sm font-medium flex items-center gap-1.5">
+                  {t('settings.general.concurrency', { count: settings.maxConcurrency })}
+                </label>
+              </div>
+              <div className="flex items-center gap-4 max-w-sm px-1 py-1">
+                <input
+                  type="range"
+                  min="1"
+                  max="30"
+                  step="1"
+                  value={settings.maxConcurrency}
+                  onChange={(e) => actions.setMaxConcurrency(parseInt(e.target.value, 10))}
+                  className="flex-1 w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+              <div className="flex justify-between text-[10px] text-muted-foreground/60 px-1">
+                <span>1</span>
+                <span>15</span>
+                <span>30</span>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+                {t('settings.general.concurTip')}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t flex items-center gap-4">
-          <Button 
-            onClick={handleTestConnection} 
-            disabled={testStatus === 'testing' || (settings.activeAiProvider === 'gemini-cloud' && !settings.geminiApiKey)}
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <Button
+            onClick={handleTestConnection}
+            disabled={testStatus === 'testing'}
+            className="w-full sm:w-auto min-w-[120px]"
+            variant="outline"
           >
-            {testStatus === 'testing' ? '测试中...' : '测试连接'}
+            {testStatus === 'testing' ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t('settings.test.testing')}</>
+            ) : (
+              t('settings.test.btn')
+            )}
           </Button>
-          
+
           {testStatus !== 'idle' && (
-            <span className={`text-sm ${
-              testStatus === 'success' ? 'text-green-600' : 
-              testStatus === 'error' ? 'text-red-500' : 'text-muted-foreground'
+            <div className={`text-sm flex items-center gap-2 animate-in fade-in ${
+              testStatus === 'success' ? 'text-emerald-500' : 
+              testStatus === 'testing' ? 'text-muted-foreground' : 'text-destructive'
             }`}>
+              {testStatus === 'success' && <CheckCircle2 className="w-4 h-4" />}
+              {testStatus === 'error' && <AlertCircle className="w-4 h-4" />}
               {testMessage}
-            </span>
+            </div>
           )}
         </div>
       </div>

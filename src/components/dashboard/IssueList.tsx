@@ -5,9 +5,10 @@ import { useLogStore } from "../../stores/log.store";
 import { DeleteAction } from "../../core/actions/delete.action";
 import {
   ExternalLink, Trash2, FolderOpen, Copy,
-  AlertTriangle, AlertCircle, Info, Loader2, Check
+  AlertTriangle, AlertCircle, Info, Loader2, Check, EyeOff
 } from "lucide-react";
 import { Button } from "../ui/button";
+import { useT } from "../../i18n";
 
 // 重复书签 issue 的 data 结构
 interface DuplicateIssueData {
@@ -53,6 +54,7 @@ interface IssueListProps {
 }
 
 export function IssueList({ result, scannerId }: IssueListProps) {
+  const t = useT();
   // 分页加载，每次显示 30 条
   const [displayCount, setDisplayCount] = useState(30);
   const { issues } = result;
@@ -66,8 +68,8 @@ export function IssueList({ result, scannerId }: IssueListProps) {
     <div className="space-y-2">
       {/* 表头提示 */}
       <div className="flex items-center justify-between text-xs text-muted-foreground px-1 pb-1">
-        <span>共 {issues.length} 个问题 (显示 {Math.min(displayCount, issues.length)} 条)</span>
-        <span className="text-[10px]">💡 点击删除按钮可逐个清理问题书签</span>
+        <span>{t('issueList.summary', { total: issues.length, display: Math.min(displayCount, issues.length) })}</span>
+        <span className="text-[10px]">{t('issueList.tip')}</span>
       </div>
 
       {/* 问题列表 */}
@@ -106,6 +108,7 @@ function IssueRow({
 }) {
   const removeIssue = useScannerStore(state => state.removeIssue);
   const addLog = useLogStore(state => state.addLog);
+  const t = useT();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
   // 内联确认状态：替代不可靠的 window.confirm()
@@ -127,7 +130,9 @@ function IssueRow({
         addLog({
           id: `log-${Date.now()}-${issue.bookmarkId}`,
           actionId: action.id,
-          description: `删除了${scannerId === 'empty-folder-scanner' ? '文件夹' : '书签'}「${issue.bookmarkTitle}」`,
+          description: scannerId === 'empty-folder-scanner'
+            ? t('issueList.logDesc.folder', { title: String(issue.bookmarkTitle) })
+            : t('issueList.logDesc.bookmark', { title: String(issue.bookmarkTitle) }),
           undoInfo,
           // 额外的上下文展现字段提取方便前端直观追溯
           bookmarkTitle: issue.bookmarkTitle,
@@ -201,28 +206,44 @@ function IssueRow({
           {scannerId === "empty-folder-scanner" && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <FolderOpen className="h-3 w-3 shrink-0" />
-              <span>此空文件夹可安全删除</span>
+              <span>{t('issueList.emptyFolder.tip')}</span>
             </div>
           )}
         </div>
 
-        {/* 右侧删除按钮 */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowConfirm(true)}
-          disabled={isDeleting || showConfirm}
-          className="shrink-0 h-8 px-2.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-        >
-          {isDeleting ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <>
-              <Trash2 className="h-3.5 w-3.5 mr-1" />
-              删除
-            </>
+        {/* 操作按钮区 */}
+        <div className="flex items-center space-x-1 shrink-0">
+          {scannerId === "dead-link-scanner" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => removeIssue(scannerId, issue.id)}
+              disabled={isDeleting || showConfirm}
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="人工确认此链接正常，从列表中排除"
+            >
+              <EyeOff className="h-3.5 w-3.5 mr-1" />
+              {t('issueList.excludeBtn')}
+            </Button>
           )}
-        </Button>
+          
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowConfirm(true)}
+            disabled={isDeleting || showConfirm}
+            className="h-8 px-2.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            {isDeleting ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <>
+                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                {t('issueList.deleteBtn')}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* 遮罩层内联确认 — 右侧对齐布局，保持操作焦点连贯 */}
@@ -239,7 +260,7 @@ function IssueRow({
               className="h-7 cursor-pointer px-3 text-xs shadow-sm font-medium"
               disabled={isDeleting}
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -248,7 +269,7 @@ function IssueRow({
               className="h-7 cursor-pointer px-3 text-xs shadow-sm font-medium"
               disabled={isDeleting}
             >
-              {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "确认"}
+              {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('common.confirm')}
             </Button>
           </div>
         </div>
@@ -259,18 +280,19 @@ function IssueRow({
 
 /** 重复书签的额外信息 - 显示文件夹路径 */
 function DuplicateExtraInfo({ data }: { data: DuplicateIssueData }) {
+  const t = useT();
   return (
     <div className="space-y-1 text-xs text-muted-foreground">
       <div className="flex items-start gap-1.5">
         <FolderOpen className="h-3 w-3 shrink-0 mt-0.5" />
         <span title={data.folderPath}>
-          <span className="text-foreground/60 font-medium">此副本位于:</span> {data.folderPath}
+          <span className="text-foreground/60 font-medium">{t('issueList.dup.copy')}</span> {data.folderPath}
         </span>
       </div>
       <div className="flex items-start gap-1.5">
         <Copy className="h-3 w-3 shrink-0 mt-0.5" />
         <span title={data.originalFolderPath}>
-          <span className="text-foreground/60 font-medium">原版位于:</span> {data.originalFolderPath}
+          <span className="text-foreground/60 font-medium">{t('issueList.dup.original')}</span> {data.originalFolderPath}
         </span>
       </div>
     </div>
@@ -279,6 +301,7 @@ function DuplicateExtraInfo({ data }: { data: DuplicateIssueData }) {
 
 /** 死链的额外信息 */
 function DeadLinkExtraInfo({ data }: { data: DeadLinkIssueData }) {
+  const t = useT();
   return (
     <div className="space-y-1 text-xs text-muted-foreground">
       {/* 文件夹路径 */}
@@ -286,7 +309,7 @@ function DeadLinkExtraInfo({ data }: { data: DeadLinkIssueData }) {
         <div className="flex items-start gap-1.5">
           <FolderOpen className="h-3 w-3 shrink-0 mt-0.5" />
           <span title={data.folderPath}>
-            <span className="text-foreground/60 font-medium">位于:</span> {data.folderPath}
+            <span className="text-foreground/60 font-medium">{t('issueList.deadLink.location')}</span> {data.folderPath}
           </span>
         </div>
       )}
@@ -302,7 +325,7 @@ function DeadLinkExtraInfo({ data }: { data: DeadLinkIssueData }) {
         )}
         {data.error === "TIMEOUT" && (
           <span className="px-1.5 py-0.5 rounded bg-yellow-500/15 text-yellow-600 text-[10px] font-medium">
-            请求超时
+            {t('issueList.deadLink.timeout')}
           </span>
         )}
       </div>

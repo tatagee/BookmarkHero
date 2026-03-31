@@ -2,6 +2,7 @@ import { AIProviderFactory } from '../providers';
 import type { ClassificationResult } from '../providers/types';
 import { useSettingsStore } from '../../stores/settings.store';
 import { getBookmarkTree } from '../../shared/chrome-api';
+import { getT } from '../../i18n';
 
 /**
  * 提取并压缩现有的文件夹树，只返回路径数组
@@ -50,7 +51,8 @@ export class ClassificationService {
 
     const isAvailable = await provider.isAvailable();
     if (!isAvailable) {
-      throw new Error(`AI Provider [${provider.name}] is currently not available. Please check settings.`);
+      const t = getT();
+      throw new Error(t('ai.provider.unavailable', { name: provider.name }));
     }
 
     // 优先使用预加载的缓存，没有缓存时才实时拉取

@@ -3,6 +3,7 @@ import { traverseBookmarkTree } from '../utils/bookmark-tree';
 import { ConcurrencyQueue, chunkArray } from '../utils/concurrency';
 import { SCAN_CONFIG } from '../../shared/constants';
 import type { DeadLinkCheckPayload, DeadLinkResultPayload } from '../../shared/messages';
+import { getT } from '../../i18n';
 
 /**
  * 通过 chrome.runtime 消息将 URL 检测任务委派给 Background Service Worker
@@ -11,7 +12,7 @@ import type { DeadLinkCheckPayload, DeadLinkResultPayload } from '../../shared/m
  * @param urls 需要被检测的书签列表
  * @param timeoutMs 每个请求的超时时间
  */
-async function checkUrlsViaBackground(
+export async function checkUrlsViaBackground(
   urls: { bookmarkId: string; url: string }[],
   timeoutMs: number
 ): Promise<DeadLinkResultPayload> {
@@ -37,8 +38,8 @@ async function checkUrlsViaBackground(
 
 export class DeadLinkScanner implements IScanner {
   public id = 'dead-link-scanner';
-  public name = '死链体检';
-  public description = '逐个检测书签链接是否已失效(404)或服务器已宕机。';
+  public name = 'scanner.deadLink.name';
+  public description = 'scanner.deadLink.desc';
 
   private isCancelled = false;
 
@@ -53,14 +54,28 @@ export class DeadLinkScanner implements IScanner {
     if (url.startsWith('file://')) return true;
     if (url.startsWith('javascript:')) return true;
 
-    if (options?.ignoreDomains) {
-      try {
-        const hostname = new URL(url).hostname;
-        if (options.ignoreDomains.some(d => hostname.includes(d))) return true;
-      } catch {
+    try {
+      const hostname = new URL(url).hostname;
+      
+      // 忽略局域网及本地开发环境 IP/域名
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '[::1]' ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('10.') ||
+        /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)
+      ) {
         return true;
       }
+
+      if (options?.ignoreDomains) {
+        if (options.ignoreDomains.some(d => hostname.includes(d))) return true;
+      }
+    } catch {
+      return true;
     }
+    
     return false;
   }
 
@@ -87,9 +102,10 @@ export class DeadLinkScanner implements IScanner {
     });
 
     const total = bookmarksWithPaths.length;
+    const t = getT();
 
     if (total === 0) {
-      if (onProgress) onProgress({ scannerId: this.id, total: 1, current: 1, message: '没有需要检测的书签' });
+      if (onProgress) onProgress({ scannerId: this.id, total: 1, current: 1, message: t('scanner.msg.noTarget') });
       return { scannerId: this.id, issues: [], stats: { totalScanned: 0, issuesFound: 0, duration: Date.now() - startTime } };
     }
 
@@ -125,9 +141,9 @@ export class DeadLinkScanner implements IScanner {
             scannedCount++;
 
             if (!urlResult.alive) {
-              let message = '链接失效';
-              if (urlResult.error === 'TIMEOUT') message = '访问超时';
-              else if (urlResult.statusCode) message = `请求失败 (HTTP ${urlResult.statusCode})`;
+              let message = t('scanner.issue.deadLink');
+              if (urlResult.error === 'TIMEOUT') message = t('scanner.issue.timeout');
+              else if (urlResult.statusCode) message = t('scanner.issue.httpError', { code: urlResult.statusCode });
 
               const bookmark = nodeMap.get(urlResult.bookmarkId);
               const folderPath = folderPathMap.get(urlResult.bookmarkId) ?? '';
@@ -156,7 +172,7 @@ export class DeadLinkScanner implements IScanner {
             scannerId: this.id,
             total,
             current: Math.min(scannedCount, total),
-            message: `已检测 ${Math.min(scannedCount, total)} / ${total}`,
+            message: t('scanner.msg.deadLink.check', { done: Math.min(scannedCount, total), total }),
           });
         }
       });
@@ -166,7 +182,7 @@ export class DeadLinkScanner implements IScanner {
     await Promise.all(checkPromises);
 
     if (onProgress) {
-      onProgress({ scannerId: this.id, total, current: total, message: '死链体检完成！' });
+      onProgress({ scannerId: this.id, total, current: total, message: t('scanner.msg.deadLink.done') });
     }
 
     return {

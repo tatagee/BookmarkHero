@@ -3,12 +3,13 @@ import { useBookmarkStore } from '../../stores/bookmark.store';
 import { ClassificationService } from '../../core/services/classification.service';
 import type { ClassificationResult } from '../../core/providers/types';
 import { Button } from '../ui/button';
-import { Loader2, ArrowRight, Check, FolderSearch, Zap, Search } from 'lucide-react';
+import { Loader2, ArrowRight, Check, FolderSearch, Zap, Search, Sparkles } from 'lucide-react';
 import { ensureFolderExists } from '../../shared/chrome-api';
 import { ConcurrencyQueue } from '../../core/utils/concurrency';
 import { useSettingsStore } from '../../stores/settings.store';
 import { useLogStore } from '../../stores/log.store';
 import { MoveAction } from '../../core/actions/move.action';
+import { useT } from '../../i18n';
 
 // === 数据模型 ===
 
@@ -83,6 +84,7 @@ export function AIClassifierPanel() {
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
   const maxConcurrency = useSettingsStore((state) => state.maxConcurrency);
   const addLog = useLogStore((state) => state.addLog);
+  const t = useT();
 
   // === 核心：一键扫描 + AI 分析 ===
   const handleStart = async () => {
@@ -180,7 +182,7 @@ export function AIClassifierPanel() {
         addLog({
           id: crypto.randomUUID(),
           actionId: action.id,
-          description: `将书签移动至 "${item.result.suggestedFolderPath}"`,
+          description: t('ai.logDesc.move', { path: item.result.suggestedFolderPath }),
           undoInfo,
           bookmarkTitle: item.title,
           bookmarkUrl: item.url,
@@ -191,7 +193,7 @@ export function AIClassifierPanel() {
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       refreshBookmarks();
     } catch (err) {
-      alert('移动失败: ' + err);
+      alert(t('ai.moveFailed', { err: String(err) }));
     }
   };
 
@@ -219,15 +221,35 @@ export function AIClassifierPanel() {
   // === 渲染 ===
   return (
     <div className="bg-card border rounded-lg p-6 space-y-5">
+      {/* 初始化指引图文 */}
+      {!isRunning && items.length === 0 && (
+        <div className="py-12 border-2 border-dashed rounded-xl border-muted flex flex-col items-center justify-center text-center px-4">
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+            <Sparkles className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="font-medium text-lg mb-2">{t('ai.guide.title')}</h3>
+          <div className="text-sm text-muted-foreground max-w-sm space-y-2">
+            <p className="flex items-start gap-2">
+              <Zap className="w-4 h-4 mt-0.5 shrink-0" />
+              <span className="text-left">{t('ai.guide.quick')}</span>
+            </p>
+            <p className="flex items-start gap-2">
+              <Search className="w-4 h-4 mt-0.5 shrink-0" />
+              <span className="text-left">{t('ai.guide.deep')}</span>
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 标题行 */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <FolderSearch className="w-5 h-5 text-primary" />
-            AI 智能整理
+            {t('ai.title')}
           </h2>
           <p className="text-sm text-muted-foreground mt-1">
-            一键扫描并分析，自动找出需要重新归类的书签。
+            {t('ai.subtitle')}
           </p>
         </div>
 
@@ -241,9 +263,9 @@ export function AIClassifierPanel() {
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
-              title="只分析根目录下的松散书签（速度快、API调用少）"
+              title={t('ai.mode.quickTip')}
             >
-              <Zap className="w-3 h-3" /> 快速
+              <Zap className="w-3 h-3" /> {t('ai.mode.quick')}
             </button>
             <button
               onClick={() => setScanMode('deep')}
@@ -252,31 +274,31 @@ export function AIClassifierPanel() {
                   ? 'bg-background text-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
-              title="分析所有书签（全面但较慢，API调用较多）"
+              title={t('ai.mode.deepTip')}
             >
-              <Search className="w-3 h-3" /> 深度
+              <Search className="w-3 h-3" /> {t('ai.mode.deep')}
             </button>
           </div>
 
           {/* 书签栏保护开关 */}
-          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title="书签栏是高频区域，默认不参与整理">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title={t('ai.includeBookmarksBarTip')}>
             <input
               type="checkbox"
               checked={includeBookmarksBar}
               onChange={(e) => setIncludeBookmarksBar(e.target.checked)}
               className="rounded border-input"
             />
-            包含书签栏
+            {t('ai.includeBookmarksBar')}
           </label>
 
           <Button onClick={handleStart} disabled={isRunning}>
             {isRunning ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                分析中 {progress.done}/{progress.total}
+                {t('ai.btnAnalyzing', { done: progress.done, total: progress.total })}
               </>
             ) : (
-              '开始整理'
+              t('ai.btnStart')
             )}
           </Button>
         </div>
@@ -292,7 +314,7 @@ export function AIClassifierPanel() {
             />
           </div>
           <p className="text-xs text-muted-foreground text-center">
-            正在用 AI 逐条分析，请稍候... ({progress.done}/{progress.total})
+            {t('ai.progressTip', { done: progress.done, total: progress.total })}
           </p>
         </div>
       )}
@@ -301,26 +323,18 @@ export function AIClassifierPanel() {
       {hasRun && !isRunning && (
         <div className="space-y-4">
           {/* 摘要 */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-muted/30 p-3 rounded">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-muted/30 border rounded-lg">
             <div className="text-sm">
-              已分析 <strong>{stats.total}</strong> 个书签
-              {stats.needMove > 0 && (
-                <span className="text-orange-600 font-medium ml-2">
-                  ⚠ {stats.needMove} 个需要整理
-                </span>
-              )}
-              {stats.correct > 0 && (
-                <span className="text-green-600 ml-2">
-                  ✅ {stats.correct} 个位置正确
-                </span>
-              )}
-              {stats.total === 0 && (
-                <span className="text-muted-foreground ml-2">未找到书签，请确认书签库非空</span>
-              )}
+              <span dangerouslySetInnerHTML={{ __html: t('ai.summary.analyzed', { total: stats.total }) }} className="mr-4" />
+              {stats.needMove > 0 && <span className="text-destructive font-medium mr-4">{t('ai.summary.needMove', { count: stats.needMove })}</span>}
+              {stats.correct > 0 && <span className="text-emerald-600 font-medium">{t('ai.summary.correct', { count: stats.correct })}</span>}
             </div>
+            {stats.total === 0 && (
+              <span className="text-sm text-muted-foreground">{t('ai.summary.empty')}</span>
+            )}
             {stats.needMove > 0 && (
               <Button size="sm" onClick={acceptAll}>
-                全部接受 ({stats.needMove})
+                {t('ai.btnAcceptAll', { count: stats.needMove })}
               </Button>
             )}
           </div>
@@ -331,18 +345,18 @@ export function AIClassifierPanel() {
               <button
                 onClick={() => setFilterTab('move')}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  filterTab === 'move' ? 'bg-background shadow-sm text-orange-600' : 'text-muted-foreground hover:text-foreground'
+                  filterTab === 'move' ? 'bg-background shadow-sm text-destructive' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                ⚠ 需整理 ({stats.needMove})
+                {t('ai.tab.move', { count: stats.needMove })}
               </button>
               <button
                 onClick={() => setFilterTab('keep')}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  filterTab === 'keep' ? 'bg-background shadow-sm text-green-600' : 'text-muted-foreground hover:text-foreground'
+                  filterTab === 'keep' ? 'bg-background shadow-sm text-emerald-600' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                ✅ 正确 ({stats.correct})
+                {t('ai.tab.keep', { count: stats.correct })}
               </button>
               <button
                 onClick={() => setFilterTab('all')}
@@ -350,7 +364,7 @@ export function AIClassifierPanel() {
                   filterTab === 'all' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
-                全部 ({stats.total})
+                {t('ai.tab.all', { count: stats.total })}
               </button>
             </div>
           )}
@@ -360,8 +374,8 @@ export function AIClassifierPanel() {
             {filteredItems.length === 0 && stats.total > 0 && (
               <div className="text-center py-6 text-sm text-muted-foreground">
                 {filterTab === 'move'
-                  ? '🎉 太棒了！所有书签都在正确的位置，无需整理。'
-                  : '当前过滤条件下没有结果'}
+                  ? t('ai.empty.move')
+                  : t('ai.empty.filter')}
               </div>
             )}
             {filteredItems.map((item) => (
@@ -369,8 +383,8 @@ export function AIClassifierPanel() {
                 key={item.id}
                 className={`border p-3 rounded transition-colors ${
                   item.result?.action === 'move'
-                    ? 'border-orange-200 bg-orange-50/30 dark:border-orange-900/30 dark:bg-orange-950/10'
-                    : 'border-green-200 bg-green-50/30 dark:border-green-900/30 dark:bg-green-950/10'
+                    ? 'border-orange-200 bg-orange-50/30'
+                    : 'border-green-200 bg-green-50/30'
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
@@ -380,24 +394,24 @@ export function AIClassifierPanel() {
                     </p>
                     <p className="text-xs text-muted-foreground truncate">{item.url}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      📂 当前: <span className="font-medium">{item.currentPath}</span>
+                      {t('ai.item.currentDir', { path: item.currentPath })}
                     </p>
 
                     {item.result?.action === 'move' && (
                       <div className="bg-primary/5 p-2 mt-2 rounded text-sm border border-primary/10">
                         <div className="flex items-center gap-2 text-primary font-medium mb-1">
                           <ArrowRight className="h-4 w-4" />
-                          建议移至: {item.result.suggestedFolderPath}
+                          {t('ai.item.suggestDir', { path: item.result.suggestedFolderPath })}
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          {item.result.reasoning} (置信度 {Math.round(item.result.confidence * 100)}%)
+                          {t('ai.item.reason.move', { reason: item.result.reasoning, confidence: Math.round(item.result.confidence * 100) })}
                         </p>
                       </div>
                     )}
 
                     {item.result?.action === 'keep' && (
                       <div className="flex items-center gap-1 mt-2 text-xs text-green-600">
-                        <Check className="h-3 w-3" /> 位置正确 — {item.result.reasoning}
+                        <Check className="h-3 w-3" /> {t('ai.item.reason.keep', { reason: item.result.reasoning })}
                       </div>
                     )}
                   </div>
@@ -405,7 +419,7 @@ export function AIClassifierPanel() {
                   {item.result?.action === 'move' && (
                     <div className="shrink-0">
                       <Button size="sm" onClick={() => acceptSuggestion(item)}>
-                        ✅ 接受
+                        {t('ai.item.btnAccept')}
                       </Button>
                     </div>
                   )}
@@ -413,18 +427,6 @@ export function AIClassifierPanel() {
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* 空状态 */}
-      {!hasRun && !isRunning && (
-        <div className="text-center py-8 text-sm text-muted-foreground">
-          <FolderSearch className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p>选择模式后点击「开始整理」</p>
-          <p className="text-xs mt-2 max-w-md mx-auto">
-            <strong>快速模式</strong>：只分析根目录下的松散书签（推荐首次使用）<br/>
-            <strong>深度模式</strong>：审查所有书签的分类是否合理（API 调用较多）
-          </p>
         </div>
       )}
     </div>

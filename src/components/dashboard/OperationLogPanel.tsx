@@ -1,20 +1,34 @@
 import { useState } from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import { useLogStore } from '../../stores/log.store';
-import { useBookmarkStore } from '../../stores/bookmark.store';
+import { useLogStore } from "../../stores/log.store";
 import { Button } from '../ui/button';
-import { Clock, RotateCcw, Trash2, CheckCircle2 } from 'lucide-react';
+import { Clock, Trash2, Undo2, Loader2 } from "lucide-react";
+import { useT } from "../../i18n";
+import { useBookmarkStore } from '../../stores/bookmark.store';
 
 export function OperationLogPanel() {
-  const { logs, clearLogs, undoLog } = useLogStore(
-    useShallow((state) => ({
-      logs: state.logs,
-      clearLogs: state.clearLogs,
-      undoLog: state.undoLog,
-    }))
-  );
+  const logs = useLogStore((state) => state.logs);
+  const clearLogs = useLogStore((state) => state.clearLogs);
+  const undoLog = useLogStore((state) => state.undoLog);
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
+  const t = useT();
   const [undoingId, setUndoingId] = useState<string | null>(null);
+
+  const getLocalizedDescription = (desc: string) => {
+    // Bookmark delete
+    let m = desc.match(/^\[清理\] 删除了书签「(.*)」$/) || desc.match(/^\[Clean\] Deleted bookmark "(.*)"$/);
+    if (m) return t('issueList.logDesc.bookmark', { title: m[1] });
+
+    // Folder delete
+    m = desc.match(/^\[清理\] 删除了文件夹「(.*)」$/) || desc.match(/^\[Clean\] Deleted folder "(.*)"$/);
+    if (m) return t('issueList.logDesc.folder', { title: m[1] });
+
+    // Move
+    m = desc.match(/^将书签移动至 "(.*)"$/) || desc.match(/^Moved bookmark to "(.*)"$/);
+    if (m) return t('ai.logDesc.move', { path: m[1] });
+
+    // Default fallback
+    return desc;
+  };
 
   if (logs.length === 0) return null;
 
@@ -22,10 +36,9 @@ export function OperationLogPanel() {
     setUndoingId(logId);
     try {
       await undoLog(logId);
-      // 撤销后重新刷新全局书签树，以保证页面显示的最新
       await refreshBookmarks();
     } catch (err) {
-      alert(`撤销失败: ${err instanceof Error ? err.message : String(err)}`);
+      alert(t('log.undoFailed', { err: String(err) }));
     } finally {
       setUndoingId(null);
     }
@@ -33,13 +46,15 @@ export function OperationLogPanel() {
 
   return (
     <div className="mt-12 space-y-4 animate-in fade-in duration-500">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          操作历史
+      <div className="flex items-center justify-between p-4 border-b">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Clock className="w-5 h-5 text-primary" />
+          {t('log.title')}
         </h2>
-        <Button variant="ghost" size="sm" onClick={clearLogs} className="text-xs text-muted-foreground">
-          <Trash2 className="h-3.5 w-3.5 mr-1" /> 清空记录
+        
+        <Button variant="ghost" size="sm" onClick={clearLogs} className="text-muted-foreground hover:text-destructive">
+          <Trash2 className="w-4 h-4 mr-2" />
+          {t('log.clearAll')}
         </Button>
       </div>
 
@@ -49,17 +64,11 @@ export function OperationLogPanel() {
           const isUndoing = undoingId === log.id;
 
           return (
-            <div key={log.id} className={`flex items-start justify-between p-4 ${isUndone ? 'bg-muted/30 opacity-70' : ''}`}>
+            <div key={log.id} className={`flex items-center justify-between p-4 ${isUndone ? 'bg-muted/30 opacity-70' : ''}`}>
               <div className="space-y-1 overflow-hidden pr-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{log.description}</span>
-                  {isUndone && (
-                    <span className="flex items-center text-[10px] text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                      <CheckCircle2 className="h-3 w-3 mr-0.5" /> 已撤销
-                    </span>
-                  )}
+                  <span className="text-sm font-medium">{getLocalizedDescription(log.description)}</span>
                 </div>
-                {/* 提取额外环境信息供展示 */}
                 {log.folderPath && (
                   <p className="text-xs text-muted-foreground truncate" title={log.folderPath}>
                     📁 {log.folderPath}
@@ -75,17 +84,29 @@ export function OperationLogPanel() {
                 </p>
               </div>
 
-              {!isUndone && log.undoInfo && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleUndo(log.id)}
-                  disabled={isUndoing}
-                  className="shrink-0 h-8 text-xs"
-                >
-                  <RotateCcw className={`mr-1.5 h-3.5 w-3.5 ${isUndoing ? 'animate-spin' : ''}`} />
-                  {isUndoing ? '撤销中...' : '撤销'}
-                </Button>
+              {isUndone ? (
+                <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                  {t('log.undoneMark')}
+                </span>
+              ) : (
+                log.undoInfo && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleUndo(log.id)}
+                    disabled={isUndoing}
+                    className="text-xs h-7"
+                  >
+                    {isUndoing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Undo2 className="w-3 h-3 mr-1" />
+                        {t('log.btnUndo')}
+                      </>
+                    )}
+                  </Button>
+                )
               )}
             </div>
           );

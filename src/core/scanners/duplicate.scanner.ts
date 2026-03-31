@@ -1,11 +1,12 @@
 import type { IScanner, ScanResult, ScanIssue, ScanProgress, ScanOptions } from './types';
 import { traverseBookmarkTree } from '../utils/bookmark-tree';
 import { normalizeUrl } from '../utils/url';
+import { getT } from '../../i18n';
 
 export class DuplicateScanner implements IScanner {
   public id = 'duplicate-scanner';
-  public name = '重复书签清理';
-  public description = '智能识别内容相同但 URL 有细微差异的重复书签。';
+  public name = 'scanner.duplicate.name';
+  public description = 'scanner.duplicate.desc';
   
   private isCancelled = false;
 
@@ -17,6 +18,7 @@ export class DuplicateScanner implements IScanner {
     this.isCancelled = false;
     const startTime = Date.now();
     const issues: ScanIssue[] = [];
+    const t = getT();
     
     // 1. 遍历书签树，保留所有的路径信息以备后续展示
     const bookmarksWithPaths: { node: chrome.bookmarks.BookmarkTreeNode, path: string }[] = [];
@@ -52,7 +54,7 @@ export class DuplicateScanner implements IScanner {
           scannerId: this.id,
           total: bookmarksWithPaths.length,
           current: i,
-          message: `正在分析: ${bookmark.title?.substring(0, 20)}...`
+          message: t('scanner.msg.dupe.check', { title: bookmark.title?.substring(0, 20) || '' })
         });
       }
       
@@ -83,7 +85,7 @@ export class DuplicateScanner implements IScanner {
             bookmarkTitle: dupe.title || '无标题书签',
             bookmarkUrl: dupe.url,
             severity: 'warning',
-            message: `发现重复书签 (与 "${originalItem.node.title}" 内容一致)`,
+            message: t('scanner.issue.duplicate', { title: originalItem.node.title || '' }),
             suggestedAction: 'delete',
             data: {
               groupId: duplicateGroupCount,
@@ -102,7 +104,7 @@ export class DuplicateScanner implements IScanner {
             scannerId: this.id,
             total: bookmarksWithPaths.length,
             current: bookmarksWithPaths.length,
-            message: '重复项扫描完成！'
+            message: t('scanner.msg.dupe.done')
         });
     }
 

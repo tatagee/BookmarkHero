@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getAllScanners } from '../core/scanners';
 import type { IScanner, ScanResult, ScanProgress, ScanOptions } from '../core/scanners';
+import { getT } from '../i18n';
 
 export interface ScannerState {
   /** 注册的全部体检项目(扫描器)列表 */
@@ -66,10 +67,11 @@ export const useScannerStore = create<ScannerState>((set, get) => ({
     }
     
     // 进入占位/准备状态
+    const t = getT();
     set({
       isScanning: true,
       activeScannerId: scannerId,
-      progress: { scannerId, total: 100, current: 0, message: '初始化扫描工具中...' }
+      progress: { scannerId, total: 100, current: 0, message: t('store.scanner.init') }
     });
     
     try {
