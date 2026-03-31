@@ -1,11 +1,18 @@
 import { useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useLogStore } from '../../stores/log.store';
 import { useBookmarkStore } from '../../stores/bookmark.store';
 import { Button } from '../ui/button';
 import { Clock, RotateCcw, Trash2, CheckCircle2 } from 'lucide-react';
 
 export function OperationLogPanel() {
-  const { logs, clearLogs, undoLog } = useLogStore();
+  const { logs, clearLogs, undoLog } = useLogStore(
+    useShallow((state) => ({
+      logs: state.logs,
+      clearLogs: state.clearLogs,
+      undoLog: state.undoLog,
+    }))
+  );
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
   const [undoingId, setUndoingId] = useState<string | null>(null);
 
@@ -53,14 +60,14 @@ export function OperationLogPanel() {
                   )}
                 </div>
                 {/* 提取额外环境信息供展示 */}
-                {(log as any).folderPath && (
-                  <p className="text-xs text-muted-foreground truncate" title={(log as any).folderPath}>
-                    📁 {(log as any).folderPath}
+                {log.folderPath && (
+                  <p className="text-xs text-muted-foreground truncate" title={log.folderPath}>
+                    📁 {log.folderPath}
                   </p>
                 )}
-                {(log as any).bookmarkUrl && (
-                  <p className="text-xs text-muted-foreground truncate" title={(log as any).bookmarkUrl}>
-                    🔗 {(log as any).bookmarkUrl}
+                {log.bookmarkUrl && (
+                  <p className="text-xs text-muted-foreground truncate" title={log.bookmarkUrl}>
+                    🔗 {log.bookmarkUrl}
                   </p>
                 )}
                 <p className="text-[10px] text-muted-foreground/60">

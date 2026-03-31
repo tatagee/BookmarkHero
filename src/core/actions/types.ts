@@ -31,4 +31,9 @@ export interface OperationLog {
   description: string;      // "删除了书签 X"
   undoInfo?: UndoInfo;      // 可用于回滚的数据
   status: 'completed' | 'undone';
+  
+  // UI 展示补充信息
+  bookmarkTitle?: string;
+  bookmarkUrl?: string;
+  folderPath?: string;
 }

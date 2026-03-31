@@ -4,6 +4,8 @@ import { useScannerStore } from '../stores/scanner.store';
 import { StatsCards } from '../components/dashboard/StatsCards';
 import { ScannerPanel } from '../components/dashboard/ScannerPanel';
 import { OperationLogPanel } from '../components/dashboard/OperationLogPanel';
+import { AIProviderSettings } from '../components/settings/AIProviderSettings';
+import { AIClassifierPanel } from '../components/dashboard/AIClassifierPanel';
 import { Button } from '../components/ui/button';
 import { RefreshCw } from 'lucide-react';
 
@@ -43,8 +45,10 @@ export default function Options() {
         <StatsCards />
 
         {/* 工具区 */}
-        <div className="pt-4">
+        <div className="pt-4 space-y-8">
+          <AIProviderSettings />
           <ScannerPanel />
+          <AIClassifierPanel />
         </div>
 
         {/* 撤销日志区 */}

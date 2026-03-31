@@ -132,8 +132,8 @@ function IssueRow({
           // 额外的上下文展现字段提取方便前端直观追溯
           bookmarkTitle: issue.bookmarkTitle,
           bookmarkUrl: issue.bookmarkUrl,
-          folderPath: (issue.data as any)?.folderPath
-        } as any); // cast since OperationLog definition structure matches the semantic layout loosely here mapped. (Will adjust log store type to include this loosely bounded display props if TS complains but standard any handles transient extensions safely)
+          folderPath: (issue.data as Record<string, unknown>)?.folderPath as string | undefined
+        });
       }
 
       setIsDeleted(true);
@@ -159,8 +159,8 @@ function IssueRow({
   }
 
   return (
-    <div className={`rounded-md border text-sm ${config.bg} ${config.border} transition-all hover:shadow-sm overflow-hidden`}>
-      <div className="flex items-start gap-3 p-3">
+    <div className={`relative rounded-md border text-sm ${config.bg} ${config.border} transition-all hover:shadow-sm overflow-hidden`}>
+      <div className={`flex items-start gap-3 p-3 transition-opacity duration-200 ${showConfirm ? 'opacity-30' : 'opacity-100'}`}>
         {/* 严重度图标 */}
         <SeverityIcon className={`h-4 w-4 mt-0.5 shrink-0 ${config.color}`} />
 
@@ -207,38 +207,37 @@ function IssueRow({
         </div>
 
         {/* 右侧删除按钮 */}
-        {!showConfirm && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowConfirm(true)}
-            disabled={isDeleting}
-            className="shrink-0 h-8 px-2.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-          >
-            {isDeleting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <>
-                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                删除
-              </>
-            )}
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowConfirm(true)}
+          disabled={isDeleting || showConfirm}
+          className="shrink-0 h-8 px-2.5 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          {isDeleting ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <>
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              删除
+            </>
+          )}
+        </Button>
       </div>
 
-      {/* 内联确认条 — 替代 window.confirm() */}
+      {/* 遮罩层内联确认 — 右侧对齐布局，保持操作焦点连贯 */}
       {showConfirm && (
-        <div className="flex items-center justify-between gap-3 px-3 py-2 bg-destructive/10 border-t border-destructive/20 animate-in slide-in-from-top-1 duration-150">
-          <p className="text-xs text-destructive font-medium">
-            ⚠️ 确认删除？此操作不可撤销。
-          </p>
-          <div className="flex gap-1.5 shrink-0">
+        <div className="absolute inset-0 z-10 flex items-center justify-end bg-gradient-to-l from-background via-background/95 to-transparent pr-3 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3 bg-background/50 backdrop-blur-sm p-1.5 rounded-md border shadow-sm">
+            <span className="text-xs text-destructive font-medium whitespace-nowrap px-1">
+              ⚠️ 确认删除？
+            </span>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => setShowConfirm(false)}
-              className="h-7 px-2.5 text-xs"
+              className="h-7 cursor-pointer px-3 text-xs shadow-sm font-medium"
+              disabled={isDeleting}
             >
               取消
             </Button>
@@ -246,9 +245,10 @@ function IssueRow({
               variant="destructive"
               size="sm"
               onClick={handleConfirmDelete}
-              className="h-7 px-2.5 text-xs"
+              className="h-7 cursor-pointer px-3 text-xs shadow-sm font-medium"
+              disabled={isDeleting}
             >
-              确认删除
+              {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "确认"}
             </Button>
           </div>
         </div>

@@ -9,10 +9,22 @@ export interface SettingsState {
   /** 全局域名豁免名单（扫瞄时遇到这些域名会直接跳过） */
   ignoreDomains: string[];
 
+  // --- AI 相关设置 ---
+  activeAiProvider: 'gemini-cloud' | 'ollama';
+  geminiApiKey: string;
+  ollamaUrl: string;
+  ollamaModel: string;
+
   actions: {
     addIgnoreDomain: (domain: string) => void;
     removeIgnoreDomain: (domain: string) => void;
     setMaxConcurrency: (count: number) => void;
+    
+    // UI AI
+    setActiveAiProvider: (providerId: 'gemini-cloud' | 'ollama') => void;
+    setGeminiApiKey: (key: string) => void;
+    setOllamaUrl: (url: string) => void;
+    setOllamaModel: (model: string) => void;
   };
 }
 
@@ -27,6 +39,12 @@ export const useSettingsStore = create<SettingsState>()(
       maxConcurrency: 5,
       ignoreDomains: ['localhost', '127.0.0.1'], // 移除 github.com, 它的死链应该被检测
 
+      // 默认 AI 选项
+      activeAiProvider: 'gemini-cloud',
+      geminiApiKey: '',
+      ollamaUrl: 'http://localhost:11434',
+      ollamaModel: 'llama3',
+
       actions: {
         addIgnoreDomain: (domain) =>
           set((state) => ({
@@ -38,6 +56,11 @@ export const useSettingsStore = create<SettingsState>()(
           })),
         setMaxConcurrency: (count) =>
           set({ maxConcurrency: Math.max(1, Math.min(20, count)) }), // 限制在 1~20 之间
+        
+        setActiveAiProvider: (p: 'gemini-cloud' | 'ollama') => set({ activeAiProvider: p }),
+        setGeminiApiKey: (key: string) => set({ geminiApiKey: key.trim() }),
+        setOllamaUrl: (url: string) => set({ ollamaUrl: url.trim() }),
+        setOllamaModel: (model: string) => set({ ollamaModel: model.trim() }),
       },
     }),
     {

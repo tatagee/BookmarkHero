@@ -8,11 +8,15 @@
  */
 
 import type { DeadLinkCheckPayload, DeadLinkResultPayload, UrlCheckResult } from '../shared/messages';
+import { ClassificationService } from '../core/services/classification.service';
+import { moveBookmark } from '../shared/chrome-api';
 
 // 让点击插件图标时打开 Side Panel
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
-console.log('[BookmarkHero] Background service worker started.');
+if (import.meta.env.DEV) {
+  console.log('[BookmarkHero] Background service worker started.');
+}
 
 /**
  * 检测单个 URL 是否存活
@@ -39,7 +43,9 @@ async function checkUrlAlive(
     }
 
     // 步骤2: HEAD 失败，fallback 到 GET（有些服务器禁止 HEAD 请求）
-    console.debug(`[DeadLink] HEAD failed (${headResponse.status}), fallback to GET: ${url}`);
+    if (import.meta.env.DEV) {
+      console.debug(`[DeadLink] HEAD failed (${headResponse.status}), fallback to GET: ${url}`);
+    }
     const getController = new AbortController();
     const getTimer = setTimeout(() => getController.abort(), timeoutMs);
     const getResponse = await fetch(url, {
@@ -103,3 +109,62 @@ chrome.runtime.onMessage.addListener(
     return false;
   }
 );
+
+// --- AI 自动分类新书签 ---
+
+const classificationResults = new Map<string, { bookmarkId: string; folderId: string; folderPath: string }>();
+
+chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
+  if (!bookmark.url) return; // 忽略文件夹的创建
+
+  try {
+    const service = new ClassificationService();
+    const res = await service.classify({ title: bookmark.title, url: bookmark.url });
+    
+    // 如果找不到精确匹配，提示
+    if (res.suggestedFolderId === 'fallback_id_or_create_new') {
+      return; 
+    }
+
+    const notifId = `classify-${id}-${Date.now()}`;
+    classificationResults.set(notifId, {
+      bookmarkId: id,
+      folderId: res.suggestedFolderId,
+      folderPath: res.suggestedFolderPath
+    });
+
+    chrome.notifications.create(notifId, {
+      type: 'basic',
+      iconUrl: 'assets/icon128.png', 
+      title: '📂 BookmarkHero 分类建议',
+      message: `将「${bookmark.title}」移到 "${res.suggestedFolderPath}"？`,
+      buttons: [{ title: '✅ 接受' }, { title: '❌ 忽略' }],
+      requireInteraction: true // 不自动消失
+    });
+  } catch (err) {
+    console.error('[AutoClassify] Failed:', err);
+  }
+});
+
+chrome.notifications.onButtonClicked.addListener(async (notifId, buttonIndex) => {
+  const result = classificationResults.get(notifId);
+  if (!result) return;
+
+  if (buttonIndex === 0) {
+    // 点击了 ✅ 接受
+    try {
+      await moveBookmark(result.bookmarkId, { parentId: result.folderId });
+    } catch (err) {
+      console.error('[AutoClassify] Move failed:', err);
+    }
+  }
+  
+  // 无论接受与否，都清理 Map 和通知
+  classificationResults.delete(notifId);
+  chrome.notifications.clear(notifId);
+});
+
+chrome.notifications.onClosed.addListener((notifId) => {
+  classificationResults.delete(notifId);
+});
+
