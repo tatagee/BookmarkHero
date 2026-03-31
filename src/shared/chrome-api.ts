@@ -119,3 +119,58 @@ export async function removeBookmarkTree(id: string): Promise<void> {
     });
   });
 }
+
+/**
+ * 确保指定的书签文件夹路径存在，如果不存在则自动创建，返回最终的 folderId
+ * @param path 文件夹路径，例如 '书签栏/开发资源/前端'
+ */
+export async function ensureFolderExists(path: string): Promise<string> {
+  const parts = path.split('/').filter(Boolean);
+  if (parts.length === 0) return '1'; // 如果传空，默认返回常理上的书签栏 ID
+
+  const tree = await getBookmarkTree();
+  // root 节点包含所有顶层（书签栏 1，其他书签 2等）
+  
+  let currentParentId = '1'; // 默认从书签栏开始找
+  let currentNodes = tree[0]?.children || [];
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    
+    // 如果是第一层级，且它是特定的根目录名字（通过匹配 id 为 1, 2, 3 的默认节点）
+    if (i === 0) {
+      const existingRoot = currentNodes.find(n => n.title === part || n.id === part);
+      if (existingRoot) {
+        currentParentId = existingRoot.id;
+        currentNodes = existingRoot.children || [];
+        continue;
+      }
+    }
+
+    // 在当前级子节点中寻找同名的文件夹
+    const existingObj = currentNodes.find(n => n.title === part && !n.url);
+    if (existingObj) {
+      currentParentId = existingObj.id;
+      // 继续往下找之前，得确信我们有它的 children，因为如果是普通节点可能没有 children 字段，此时需要 getSubTree
+      if (existingObj.children) {
+         currentNodes = existingObj.children;
+      } else {
+         // chrome api getTree 查出来的是所有的，所以理论上一定有 children，如果没带，就去拿子树
+         const subTree = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((resolve) => {
+            chrome.bookmarks.getSubTree(existingObj.id, resolve);
+         });
+         currentNodes = subTree[0]?.children || [];
+      }
+    } else {
+      // 没找到，创建这个层级
+      const newFolder = await createBookmark({
+        parentId: currentParentId,
+        title: part
+      });
+      currentParentId = newFolder.id;
+      currentNodes = []; // 新创建的一定是空的
+    }
+  }
+
+  return currentParentId;
+}

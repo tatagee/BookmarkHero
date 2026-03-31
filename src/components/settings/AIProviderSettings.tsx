@@ -79,6 +79,19 @@ export function AIProviderSettings() {
                 密钥仅保存在您的浏览器本地，不会上传到我们的服务器。<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline hover:text-primary">获取免费 API Key</a>
               </p>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">使用模型 (Model)</label>
+              <input 
+                type="text" 
+                value={settings.geminiModel} 
+                onChange={(e) => actions.setGeminiModel(e.target.value)}
+                placeholder="gemini-flash-lite-latest"
+                className="w-full sm:max-w-xs flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                推荐使用 gemini-flash-lite-latest 或 gemini-2.5-flash。
+              </p>
+            </div>
           </div>
         )}
 

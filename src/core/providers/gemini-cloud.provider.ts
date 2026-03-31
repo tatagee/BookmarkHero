@@ -7,21 +7,37 @@ export class GeminiCloudProvider implements IAIProvider {
   name = 'Gemini API (Cloud)';
 
   async isAvailable(): Promise<boolean> {
-    const { geminiApiKey } = useSettingsStore.getState();
-    return !!geminiApiKey;
+    const { geminiApiKey, geminiModel } = useSettingsStore.getState();
+    if (!geminiApiKey) {
+      return false;
+    }
+
+    try {
+      const genAI = new GoogleGenerativeAI(geminiApiKey);
+      const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
+      // 发送一个最小的探测请求，真正验证 API Key 的连通性和有效性
+      await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: '1' }] }],
+        generationConfig: { maxOutputTokens: 1 },
+      });
+      return true;
+    } catch (error) {
+      console.warn('[GeminiCloudProvider] isAvailable test failed:', error);
+      return false;
+    }
   }
 
   async classify(
     bookmark: { title: string; url: string },
     existingFolders: { id: string; path: string }[]
   ): Promise<ClassificationResult> {
-    const { geminiApiKey } = useSettingsStore.getState();
+    const { geminiApiKey, geminiModel } = useSettingsStore.getState();
     if (!geminiApiKey) {
       throw new Error('Gemini API Key is not configured.');
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
 
     const prompt = this.buildPrompt(bookmark, existingFolders);
 

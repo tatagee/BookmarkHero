@@ -7,7 +7,7 @@ import { OperationLogPanel } from '../components/dashboard/OperationLogPanel';
 import { AIProviderSettings } from '../components/settings/AIProviderSettings';
 import { AIClassifierPanel } from '../components/dashboard/AIClassifierPanel';
 import { Button } from '../components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Settings, Search, BarChart2, ChevronDown } from 'lucide-react';
 
 export default function Options() {
   const refreshBookmarks = useBookmarkStore(state => state.refreshBookmarks);
@@ -28,26 +28,55 @@ export default function Options() {
 
   return (
     <div className="min-h-screen bg-background text-foreground animate-in fade-in duration-500">
-      <div className="max-w-6xl mx-auto p-8 space-y-8">
+      <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
         {/* 页头 */}
-        <div className="flex items-center justify-between mb-10 pb-4 border-b">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">BookmarkHero 控制台</h1>
-            <p className="text-muted-foreground mt-1">你的数字记忆管家，随时保持书签库轻盈健康。</p>
+            <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">BookmarkHero</h1>
+            <p className="text-sm text-muted-foreground mt-1">智能分析与自动分类您的书签库。</p>
           </div>
-          <Button variant="outline" onClick={handleRefresh} disabled={isLoading} className="shadow-sm">
+          <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="shadow-sm">
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            重新获取数据
+            刷新
           </Button>
         </div>
 
-        {/* 核心统计 */}
-        <StatsCards />
+        {/* 顶部总览和配置区 (默认折叠压缩空间) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
+            <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
+              <span className="flex items-center gap-2"><BarChart2 className="w-5 h-5 text-primary" /> 数据总览</span>
+              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="p-4 border-t px-6 pb-6">
+               <StatsCards />
+            </div>
+          </details>
 
-        {/* 工具区 */}
-        <div className="pt-4 space-y-8">
-          <AIProviderSettings />
-          <ScannerPanel />
+          <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
+            <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
+              <span className="flex items-center gap-2"><Settings className="w-5 h-5 text-primary" /> 引擎配置</span>
+              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
+            </summary>
+            <div className="p-4 border-t px-6 pb-6">
+               <AIProviderSettings />
+            </div>
+          </details>
+        </div>
+
+        {/* 旧版清理工具区 (默认折叠) */}
+        <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
+          <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
+            <span className="flex items-center gap-2"><Search className="w-5 h-5 text-primary" /> 常规清理 (死链/重复)</span>
+            <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="p-4 border-t pb-6">
+             <ScannerPanel />
+          </div>
+        </details>
+
+        {/* 主视线高亮区：AI分类面板 */}
+        <div className="pt-2">
           <AIClassifierPanel />
         </div>
 

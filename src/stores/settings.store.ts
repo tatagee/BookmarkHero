@@ -12,6 +12,7 @@ export interface SettingsState {
   // --- AI 相关设置 ---
   activeAiProvider: 'gemini-cloud' | 'ollama';
   geminiApiKey: string;
+  geminiModel: string;
   ollamaUrl: string;
   ollamaModel: string;
 
@@ -23,6 +24,7 @@ export interface SettingsState {
     // UI AI
     setActiveAiProvider: (providerId: 'gemini-cloud' | 'ollama') => void;
     setGeminiApiKey: (key: string) => void;
+    setGeminiModel: (model: string) => void;
     setOllamaUrl: (url: string) => void;
     setOllamaModel: (model: string) => void;
   };
@@ -42,6 +44,7 @@ export const useSettingsStore = create<SettingsState>()(
       // 默认 AI 选项
       activeAiProvider: 'gemini-cloud',
       geminiApiKey: '',
+      geminiModel: 'gemini-flash-lite-latest',
       ollamaUrl: 'http://localhost:11434',
       ollamaModel: 'llama3',
 
@@ -59,6 +62,7 @@ export const useSettingsStore = create<SettingsState>()(
         
         setActiveAiProvider: (p: 'gemini-cloud' | 'ollama') => set({ activeAiProvider: p }),
         setGeminiApiKey: (key: string) => set({ geminiApiKey: key.trim() }),
+        setGeminiModel: (model: string) => set({ geminiModel: model.trim() }),
         setOllamaUrl: (url: string) => set({ ollamaUrl: url.trim() }),
         setOllamaModel: (model: string) => set({ ollamaModel: model.trim() }),
       },

@@ -27,8 +27,7 @@ function extractFolderPaths(tree: chrome.bookmarks.BookmarkTreeNode[]): { id: st
   // The 'tree' usually contains a single root node with children representing the different categories
   traverse(tree, '');
   
-  // optionally limit to a reasonable number to avoid context overflow, e.g. top 200 paths
-  return folders.slice(0, 200); 
+  return folders; 
 }
 
 export class ClassificationService {

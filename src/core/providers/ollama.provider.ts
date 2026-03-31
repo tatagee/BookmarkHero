@@ -6,11 +6,28 @@ export class OllamaProvider implements IAIProvider {
   name = 'Ollama (Local)';
 
   async isAvailable(): Promise<boolean> {
-    const { ollamaUrl } = useSettingsStore.getState();
+    const { ollamaUrl, ollamaModel } = useSettingsStore.getState();
     try {
+      const targetModel = ollamaModel || 'llama3';
       const resp = await fetch(`${ollamaUrl}/api/tags`);
-      return resp.ok;
-    } catch {
+      if (!resp.ok) return false;
+
+      const data = await resp.json();
+      const models = Array.isArray(data.models) ? data.models : [];
+      
+      // 检查所需模型是否存在于本地 (支持匹配 :latest 或直接全名匹配)
+      const hasModel = models.some((m: { name: string }) => 
+        m.name === targetModel || m.name.startsWith(`${targetModel}:`)
+      );
+
+      if (!hasModel) {
+        throw new Error(`服务连通正常，但未下载模型 '${targetModel}'，请先在终端执行即可：ollama pull ${targetModel}`);
+      }
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('未下载模型')) {
+        throw error;
+      }
       return false;
     }
   }
