@@ -4,9 +4,11 @@ import { ClassificationService } from '../../core/services/classification.servic
 import type { ClassificationResult } from '../../core/providers/types';
 import { Button } from '../ui/button';
 import { Loader2, ArrowRight, Check, FolderSearch, Zap, Search } from 'lucide-react';
-import { moveBookmark, ensureFolderExists } from '../../shared/chrome-api';
+import { ensureFolderExists } from '../../shared/chrome-api';
 import { ConcurrencyQueue } from '../../core/utils/concurrency';
 import { useSettingsStore } from '../../stores/settings.store';
+import { useLogStore } from '../../stores/log.store';
+import { MoveAction } from '../../core/actions/move.action';
 
 // === 数据模型 ===
 
@@ -79,6 +81,7 @@ export function AIClassifierPanel() {
   const tree = useBookmarkStore((state) => state.tree);
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
   const maxConcurrency = useSettingsStore((state) => state.maxConcurrency);
+  const addLog = useLogStore((state) => state.addLog);
 
   // === 核心：一键扫描 + AI 分析 ===
   const handleStart = async () => {
@@ -155,7 +158,25 @@ export function AIClassifierPanel() {
       if (targetId === 'fallback_id_or_create_new' || targetId === 'fallback') {
         targetId = await ensureFolderExists(item.result.suggestedFolderPath);
       }
-      await moveBookmark(item.id, { parentId: targetId });
+      
+      const action = new MoveAction();
+      const undoInfo = await action.execute({
+        bookmarkId: item.id,
+        payload: { parentId: targetId }
+      });
+
+      if (undoInfo) {
+        addLog({
+          id: crypto.randomUUID(),
+          actionId: action.id,
+          description: `将书签移动至 "${item.result.suggestedFolderPath}"`,
+          undoInfo,
+          bookmarkTitle: item.title,
+          bookmarkUrl: item.url,
+          folderPath: item.currentPath,
+        });
+      }
+
       setItems((prev) => prev.filter((i) => i.id !== item.id));
       refreshBookmarks();
     } catch (err) {

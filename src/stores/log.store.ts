@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { STORAGE_KEYS } from '../shared/constants';
 import type { OperationLog } from '../core/actions/types';
 import { DeleteAction } from '../core/actions/delete.action';
+import { MoveAction } from '../core/actions/move.action';
 
 export interface LogState {
   logs: OperationLog[];
@@ -57,6 +58,9 @@ export const useLogStore = create<LogState>()(
             // 目前只有 DeleteAction 支持 Undo
             if (log.actionId === 'delete.action') {
               const action = new DeleteAction();
+              await action.undo(log.undoInfo);
+            } else if (log.actionId === 'move.action') {
+              const action = new MoveAction();
               await action.undo(log.undoInfo);
             } else {
               throw new Error(`Undo not implemented for action: ${log.actionId}`);
