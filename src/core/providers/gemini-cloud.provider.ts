@@ -79,12 +79,61 @@ export class GeminiCloudProvider implements IAIProvider {
     bookmark: { title: string; url: string; currentPath?: string },
     folders: { id: string; path: string }[]
   ): string {
+    const { categoryLanguage } = useSettingsStore.getState();
     const folderListStr = folders.map((f) => `- ${f.path}`).join('\n');
     const currentLocation = bookmark.currentPath
       ? `当前所在位置：${bookmark.currentPath}`
       : '当前所在位置：未分类（根目录）';
 
+    // 语言控制指令
+    const langInstruction = categoryLanguage === 'en'
+      ? 'LANGUAGE RULE: All new folder names and paths MUST be in English (e.g., "Development/Frontend", "Online Tools"). Existing folder names should remain unchanged.'
+      : '语言规则：所有新建文件夹名称必须使用中文（如："开发资源/前端"、"在线工具"）。已有文件夹的名称保持不变。';
+
+    // 分类数量约束
+    const categoryConstraint = categoryLanguage === 'en'
+      ? 'CATEGORY RULE: Keep total top-level categories within 15-20 broad themes (e.g., Development, Design, Tools, Learning, Entertainment). Avoid overly granular sub-categories.'
+      : '分类规则：总分类应控制在 15-20 个宏观大类之内（如：开发资源、设计素材、在线工具、学习笔记、娱乐休闲等），避免创建过于琐碎的微分类。';
+
+    // 根据语言选择示例
+    const exampleMove = categoryLanguage === 'en'
+      ? `{
+  "action": "move",
+  "suggestedFolderPath": "Bookmarks Bar/Development/Frontend",
+  "confidence": 0.95,
+  "reasoning": "This is a React tutorial link, belongs to frontend development, should not be in root.",
+  "alternatives": [
+    { "path": "Bookmarks Bar/Learning", "confidence": 0.6 }
+  ]
+}`
+      : `{
+  "action": "move",
+  "suggestedFolderPath": "书签栏/开发资源/前端",
+  "confidence": 0.95,
+  "reasoning": "该链接是关于 React 的教程，属于前端开发范畴，不应放在根目录。",
+  "alternatives": [
+    { "path": "书签栏/学习笔记", "confidence": 0.6 }
+  ]
+}`;
+
+    const exampleKeep = categoryLanguage === 'en'
+      ? `{
+  "action": "keep",
+  "suggestedFolderPath": "Bookmarks Bar/Development/Frontend",
+  "confidence": 0.92,
+  "reasoning": "This bookmark is already in the frontend development folder, placement is correct."
+}`
+      : `{
+  "action": "keep",
+  "suggestedFolderPath": "书签栏/开发资源/前端",
+  "confidence": 0.92,
+  "reasoning": "该书签已在前端开发相关文件夹中，位置合理。"
+}`;
+
     return `你是一个书签分类助手。请根据书签的标题、URL 和当前所在位置，判断该书签是否放在了合理的位置。
+
+${langInstruction}
+${categoryConstraint}
 
 用户已有文件夹：
 ${folderListStr}
@@ -106,23 +155,10 @@ ${currentLocation}
 - alternatives: 备选列表，每个元素包含 path 和 confidence（最多2个，可选）
 
 示例输出（需要移动）：
-{
-  "action": "move",
-  "suggestedFolderPath": "书签栏/开发资源/前端",
-  "confidence": 0.95,
-  "reasoning": "该链接是关于 React 的教程，属于前端开发范畴，不应放在根目录。",
-  "alternatives": [
-    { "path": "书签栏/学习笔记", "confidence": 0.6 }
-  ]
-}
+${exampleMove}
 
 示例输出（位置正确）：
-{
-  "action": "keep",
-  "suggestedFolderPath": "书签栏/开发资源/前端",
-  "confidence": 0.92,
-  "reasoning": "该书签已在前端开发相关文件夹中，位置合理。"
-}`;
+${exampleKeep}`;
   }
 
   /**

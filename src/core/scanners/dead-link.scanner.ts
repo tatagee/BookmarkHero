@@ -1,6 +1,6 @@
 import type { IScanner, ScanResult, ScanIssue, ScanProgress, ScanOptions } from './types';
 import { traverseBookmarkTree } from '../utils/bookmark-tree';
-import { ConcurrencyQueue } from '../utils/concurrency';
+import { ConcurrencyQueue, chunkArray } from '../utils/concurrency';
 import { SCAN_CONFIG } from '../../shared/constants';
 import type { DeadLinkCheckPayload, DeadLinkResultPayload } from '../../shared/messages';
 
@@ -93,60 +93,71 @@ export class DeadLinkScanner implements IScanner {
       return { scannerId: this.id, issues: [], stats: { totalScanned: 0, issuesFound: 0, duration: Date.now() - startTime } };
     }
 
-    // 弃用之前的按批次分块 (BATCH_SIZE) 处理
-    // 改用 ConcurrencyQueue 实现精确的滑动窗口并发调度，避免慢链接阻塞整批
+    // 按批次分组：每批 BATCH_SIZE 个 URL 一起发给 Background 并发检测
+    // 这样大幅减少 IPC 通信次数，加速整体检测
+    const BATCH_SIZE = 10;
+    const batches = chunkArray(bookmarksWithPaths, BATCH_SIZE);
     const effectiveConcurrency = options?.maxConcurrency ?? SCAN_CONFIG.MAX_CONCURRENCY;
     const queue = new ConcurrencyQueue(effectiveConcurrency);
     let scannedCount = 0;
 
-    // 为每个需要检测的书签创建一个入队的 Promise
-    const checkPromises = bookmarksWithPaths.map(({ node: bookmark, folderPath }) => {
+    // 构建 node id → folderPath 的快速查找表
+    const folderPathMap = new Map<string, string>();
+    const nodeMap = new Map<string, chrome.bookmarks.BookmarkTreeNode>();
+    for (const item of bookmarksWithPaths) {
+      folderPathMap.set(item.node.id, item.folderPath);
+      nodeMap.set(item.node.id, item.node);
+    }
+
+    // 为每个批次创建一个入队的 Promise
+    const checkPromises = batches.map((batch) => {
       return queue.run(async () => {
         if (this.isCancelled) return;
-        
+
         try {
-          // 只把当前的单个 URL 交给 Background 测活
-          const result = await checkUrlsViaBackground(
-            [{ bookmarkId: bookmark.id, url: bookmark.url! }], 
-            SCAN_CONFIG.HEAD_TIMEOUT_MS
-          );
-          
+          const urls = batch.map(b => ({ bookmarkId: b.node.id, url: b.node.url! }));
+          const result = await checkUrlsViaBackground(urls, SCAN_CONFIG.HEAD_TIMEOUT_MS);
+
           if (this.isCancelled) return;
-          
-          scannedCount++;
-          const urlResult = result.results[0]; // 只有一个结果
 
-          if (!urlResult.alive) {
-            let message = '链接失效';
-            if (urlResult.error === 'TIMEOUT') message = '访问超时';
-            else if (urlResult.statusCode) message = `请求失败 (HTTP ${urlResult.statusCode})`;
+          // 遍历该批次的所有结果
+          for (const urlResult of result.results) {
+            scannedCount++;
 
-            issues.push({
-              id: `deadlink-${urlResult.bookmarkId}`,
-              bookmarkId: urlResult.bookmarkId,
-              bookmarkTitle: bookmark.title || '无标题书签',
-              bookmarkUrl: urlResult.url,
-              severity: 'error',
-              message,
-              suggestedAction: 'delete',
-              // 新增 folderPath，方便用户定位书签位置
-              data: { statusCode: urlResult.statusCode, error: urlResult.error, folderPath },
-            });
-          }
+            if (!urlResult.alive) {
+              let message = '链接失效';
+              if (urlResult.error === 'TIMEOUT') message = '访问超时';
+              else if (urlResult.statusCode) message = `请求失败 (HTTP ${urlResult.statusCode})`;
 
-          // 发送 UI 刷新（每检测够设定数量刷新一次界面避免过度重绘）
-          if (onProgress && scannedCount % 5 === 0) {
-            onProgress({
-              scannerId: this.id,
-              total,
-              current: scannedCount,
-              message: `已检测 ${scannedCount} / ${total}`,
-            });
+              const bookmark = nodeMap.get(urlResult.bookmarkId);
+              const folderPath = folderPathMap.get(urlResult.bookmarkId) ?? '';
+
+              issues.push({
+                id: `deadlink-${urlResult.bookmarkId}`,
+                bookmarkId: urlResult.bookmarkId,
+                bookmarkTitle: bookmark?.title || '无标题书签',
+                bookmarkUrl: urlResult.url,
+                severity: 'error',
+                message,
+                suggestedAction: 'delete',
+                data: { statusCode: urlResult.statusCode, error: urlResult.error, folderPath },
+              });
+            }
           }
         } catch (err) {
           if (this.isCancelled) return;
-          console.error('[DeadLinkScanner] Single check failed:', err);
-          scannedCount++; // 即使失败内部代码错误也按扫过处理，免得长久卡死进度条
+          console.error('[DeadLinkScanner] Batch check failed:', err);
+          scannedCount += batch.length; // 失败也算扫过，防止进度卡死
+        }
+
+        // 每完成一个批次更新一次进度
+        if (onProgress) {
+          onProgress({
+            scannerId: this.id,
+            total,
+            current: Math.min(scannedCount, total),
+            message: `已检测 ${Math.min(scannedCount, total)} / ${total}`,
+          });
         }
       });
     });

@@ -77,6 +77,7 @@ export function AIClassifierPanel() {
   const [items, setItems] = useState<BookmarkItem[]>([]);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [hasRun, setHasRun] = useState(false);
+  const [includeBookmarksBar, setIncludeBookmarksBar] = useState(false);
 
   const tree = useBookmarkStore((state) => state.tree);
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
@@ -90,12 +91,21 @@ export function AIClassifierPanel() {
     setItems([]);
     setFilterTab('move');
 
-    // 1. 收集书签
-    const rootNodes = tree[0]?.children || [];
+    // 1. 收集书签（根据「包含书签栏」开关过滤）
+    const allRootNodes = tree[0]?.children || [];
+    const rootNodes = allRootNodes.filter((node) => {
+      if (!includeBookmarksBar) {
+        // Chrome 书签栏固定 ID 为 '1'，同时兼容不同语言 locale 的名称匹配
+        if (node.id === '1' || /^(Bookmarks bar|书签栏|Bookmarks Bar)$/i.test(node.title)) {
+          return false;
+        }
+      }
+      return true;
+    });
     let collected: BookmarkItem[];
 
     if (scanMode === 'quick') {
-      // 快速模式：包含所有根节点（书签栏 + 其他书签）下直接挂的松散书签
+      // 快速模式：包含所有根节点下直接挂的松散书签
       collected = collectRootBookmarks(rootNodes);
     } else {
       // 深度模式：遍历全树
@@ -115,6 +125,7 @@ export function AIClassifierPanel() {
 
     // 2. 立刻批量调用 AI 分析，用并发队列限流
     const service = new ClassificationService();
+    await service.preloadFolders(); // 预加载文件夹列表，所有并发分析复用同一份缓存
     const queue = new ConcurrencyQueue(maxConcurrency);
     const results: BookmarkItem[] = [];
     let completed = 0;
@@ -246,6 +257,18 @@ export function AIClassifierPanel() {
               <Search className="w-3 h-3" /> 深度
             </button>
           </div>
+
+          {/* 书签栏保护开关 */}
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title="书签栏是高频区域，默认不参与整理">
+            <input
+              type="checkbox"
+              checked={includeBookmarksBar}
+              onChange={(e) => setIncludeBookmarksBar(e.target.checked)}
+              className="rounded border-input"
+            />
+            包含书签栏
+          </label>
+
           <Button onClick={handleStart} disabled={isRunning}>
             {isRunning ? (
               <>

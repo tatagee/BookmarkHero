@@ -37,6 +37,11 @@ export interface ScannerState {
    * 从某个扫描器的结果中移除单条 issue（用户手动删除书签后调用）
    */
   removeIssue: (scannerId: string, issueId: string) => void;
+  
+  /**
+   * 批量移除多条 issue（一键清理后调用，只触发一次 state 更新）
+   */
+  batchRemoveIssues: (scannerId: string, issueIds: string[]) => void;
 }
 
 export const useScannerStore = create<ScannerState>((set, get) => ({
@@ -118,6 +123,29 @@ export const useScannerStore = create<ScannerState>((set, get) => ({
       if (!result) return state;
       
       const newIssues = result.issues.filter(i => i.id !== issueId);
+      return {
+        results: {
+          ...state.results,
+          [scannerId]: {
+            ...result,
+            issues: newIssues,
+            stats: {
+              ...result.stats,
+              issuesFound: newIssues.length,
+            }
+          }
+        }
+      };
+    });
+  },
+  
+  batchRemoveIssues: (scannerId, issueIds) => {
+    set((state) => {
+      const result = state.results[scannerId];
+      if (!result) return state;
+      
+      const idsSet = new Set(issueIds);
+      const newIssues = result.issues.filter(i => !idsSet.has(i.id));
       return {
         results: {
           ...state.results,

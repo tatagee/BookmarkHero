@@ -145,7 +145,7 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
 
     chrome.notifications.create(notifId, {
       type: 'basic',
-      iconUrl: 'assets/icon128.png', 
+      iconUrl: chrome.runtime.getURL('icons/icon128.png'), 
       title: '📂 BookmarkHero 分类建议',
       message: `将「${bookmark.title}」移到 "${res.suggestedFolderPath}"？`,
       buttons: [{ title: '✅ 接受' }, { title: '❌ 忽略' }],

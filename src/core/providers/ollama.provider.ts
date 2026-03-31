@@ -36,14 +36,27 @@ export class OllamaProvider implements IAIProvider {
     bookmark: { title: string; url: string; currentPath?: string },
     existingFolders: { id: string; path: string }[]
   ): Promise<ClassificationResult> {
-    const { ollamaUrl, ollamaModel } = useSettingsStore.getState();
+    const { ollamaUrl, ollamaModel, categoryLanguage } = useSettingsStore.getState();
 
     const folderListStr = existingFolders.map((f) => `- ${f.path}`).join('\n');
     const currentLocation = bookmark.currentPath
       ? `当前所在位置：${bookmark.currentPath}`
       : '当前所在位置：未分类（根目录）';
 
+    // 语言控制指令
+    const langInstruction = categoryLanguage === 'en'
+      ? 'LANGUAGE RULE: All new folder names MUST be in English. Existing folder names remain unchanged.'
+      : '语言规则：所有新建文件夹名称必须使用中文。已有文件夹的名称保持不变。';
+
+    // 分类数量约束
+    const categoryConstraint = categoryLanguage === 'en'
+      ? 'CATEGORY RULE: Keep top-level categories within 15-20 broad themes. Avoid granular sub-categories.'
+      : '分类规则：总分类应控制在 15-20 个宏观大类之内，避免创建过于琐碎的微分类。';
+
     const prompt = `你是一个书签分类助手。请根据书签的标题、URL 和当前位置，判断该书签是否放在了合理的位置。
+
+${langInstruction}
+${categoryConstraint}
 
 用户已有文件夹：
 ${folderListStr}

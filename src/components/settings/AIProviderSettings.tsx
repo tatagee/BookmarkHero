@@ -123,6 +123,41 @@ export function AIProviderSettings() {
           </div>
         )}
 
+        {/* 通用分类偏好设置（与 Provider 无关） */}
+        <div className="mt-6 pt-6 border-t space-y-3">
+          <h3 className="text-sm font-medium">分类偏好</h3>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">
+              📝 分类命名语言
+            </label>
+            <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
+              <button
+                onClick={() => actions.setCategoryLanguage('zh')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  settings.categoryLanguage === 'zh'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                中文
+              </button>
+              <button
+                onClick={() => actions.setCategoryLanguage('en')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  settings.categoryLanguage === 'en'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                English
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              控制 AI 建议的新文件夹使用的语言，已有文件夹名称不受影响。
+            </p>
+          </div>
+        </div>
+
         <div className="mt-8 pt-6 border-t flex items-center gap-4">
           <Button 
             onClick={handleTestConnection} 

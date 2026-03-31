@@ -64,3 +64,17 @@ export class ConcurrencyQueue {
     }
   }
 }
+
+/**
+ * 将数组按指定大小分块
+ * @param arr 原始数组
+ * @param size 每块的大小
+ * @returns 分块后的二维数组
+ */
+export function chunkArray<T>(arr: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    chunks.push(arr.slice(i, i + size));
+  }
+  return chunks;
+}

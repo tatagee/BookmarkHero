@@ -3,12 +3,147 @@ import { useShallow } from "zustand/react/shallow";
 import { useScannerStore } from "../../stores/scanner.store";
 import { useBookmarkStore } from "../../stores/bookmark.store";
 import { useSettingsStore } from "../../stores/settings.store";
+import { useLogStore } from "../../stores/log.store";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Progress } from "../ui/progress";
-import { Play, Square, ChevronDown, X } from "lucide-react";
-import type { ScanOptions } from "../../core/scanners";
+import { Play, Square, ChevronDown, X, Trash2, Loader2 } from "lucide-react";
+import type { ScanOptions, ScanIssue } from "../../core/scanners";
 import { IssueList } from "./IssueList";
+import { DeleteAction } from "../../core/actions/delete.action";
+import { ConcurrencyQueue } from "../../core/utils/concurrency";
+
+/** 一键清理子组件 — 内嵌在结果面板标题栏中 */
+function BatchDeleteButton({
+  scannerId,
+  issues,
+}: {
+  scannerId: string;
+  issues: ScanIssue[];
+}) {
+  const batchRemoveIssues = useScannerStore(state => state.batchRemoveIssues);
+  const addLog = useLogStore(state => state.addLog);
+  const refreshBookmarks = useBookmarkStore(state => state.refreshBookmarks);
+
+  const [phase, setPhase] = useState<'idle' | 'confirming' | 'deleting' | 'done'>('idle');
+  const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
+
+  const handleBatchDelete = async () => {
+    setPhase('deleting');
+    const total = issues.length;
+    setProgress({ done: 0, total, failed: 0 });
+
+    const queue = new ConcurrencyQueue(5);
+    let done = 0;
+    let failed = 0;
+    const deletedIds: string[] = [];
+
+    const tasks = issues.map((issue) => async () => {
+      try {
+        const action = new DeleteAction();
+        const undoInfo = await action.execute({ bookmarkId: issue.bookmarkId });
+
+        if (undoInfo) {
+          // 记录日志，支持逐条撤销
+          addLog({
+            id: `log-batch-${Date.now()}-${issue.bookmarkId}`,
+            actionId: action.id,
+            description: `[批量清理] 删除了${scannerId === 'empty-folder-scanner' ? '文件夹' : '书签'}「${issue.bookmarkTitle}」`,
+            undoInfo,
+            bookmarkTitle: issue.bookmarkTitle,
+            bookmarkUrl: issue.bookmarkUrl,
+            folderPath: (issue.data as Record<string, unknown>)?.folderPath as string | undefined,
+          });
+        }
+        deletedIds.push(issue.id);
+      } catch (err) {
+        console.error(`[BatchDelete] 删除 ${issue.bookmarkId} 失败:`, err);
+        failed++;
+      } finally {
+        done++;
+        setProgress({ done, total, failed });
+      }
+    });
+
+    await Promise.all(tasks.map((t) => queue.run(t)));
+
+    // 一次性从 store 中移除所有成功删除的 issue
+    if (deletedIds.length > 0) {
+      batchRemoveIssues(scannerId, deletedIds);
+      refreshBookmarks();
+    }
+
+    setPhase('done');
+    // 2 秒后自动复位
+    setTimeout(() => setPhase('idle'), 2000);
+  };
+
+  if (issues.length === 0) return null;
+
+  return (
+    <div className="relative flex items-center">
+      {phase === 'idle' && (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={() => setPhase('confirming')}
+        >
+          <Trash2 className="h-3 w-3" />
+          一键清理全部 ({issues.length})
+        </Button>
+      )}
+
+      {phase === 'confirming' && (
+        <div className="flex items-center gap-2 animate-in fade-in duration-200">
+          <span className="text-xs text-destructive font-medium whitespace-nowrap">
+            ⚠️ 确认清理全部 {issues.length} 项？
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={() => setPhase('idle')}
+          >
+            取消
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="h-7 px-3 text-xs"
+            onClick={handleBatchDelete}
+          >
+            确认清理
+          </Button>
+        </div>
+      )}
+
+      {phase === 'deleting' && (
+        <div className="flex items-center gap-3 animate-in fade-in duration-200">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-medium">
+              已清理 {progress.done}/{progress.total}
+              {progress.failed > 0 && <span className="text-yellow-600 ml-1">失败 {progress.failed}</span>}
+            </span>
+            <div className="w-32 bg-muted rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-destructive h-1.5 rounded-full transition-all duration-200"
+                style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {phase === 'done' && (
+        <span className="text-xs text-emerald-600 font-medium animate-in fade-in duration-200">
+          ✅ 清理完成！
+        </span>
+      )}
+    </div>
+  );
+}
 
 export function ScannerPanel() {
   const { scanners, isScanning, activeScannerId, progress, startScan, cancelScan, results } = useScannerStore(
@@ -133,14 +268,21 @@ export function ScannerPanel() {
                 {expandedResult.issues.length} 项
               </span>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={() => setExpandedScannerId(null)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-3">
+              {/* 一键清理按钮 */}
+              <BatchDeleteButton
+                scannerId={expandedScannerId}
+                issues={expandedResult.issues}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setExpandedScannerId(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           {/* 全宽问题列表 */}
           <div className="p-4">

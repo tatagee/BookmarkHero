@@ -6,6 +6,8 @@ import { chromeStorageAdapter } from '../shared/chrome-storage-adapter';
 export interface SettingsState {
   /** 允许并发的最大数 */
   maxConcurrency: number;
+  /** AI 建议分类文件夹的命名语言 */
+  categoryLanguage: 'zh' | 'en';
   /** 全局域名豁免名单（扫瞄时遇到这些域名会直接跳过） */
   ignoreDomains: string[];
 
@@ -20,6 +22,7 @@ export interface SettingsState {
     addIgnoreDomain: (domain: string) => void;
     removeIgnoreDomain: (domain: string) => void;
     setMaxConcurrency: (count: number) => void;
+    setCategoryLanguage: (lang: 'zh' | 'en') => void;
     
     // UI AI
     setActiveAiProvider: (providerId: 'gemini-cloud' | 'ollama') => void;
@@ -38,7 +41,8 @@ export interface SettingsState {
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
-      maxConcurrency: 5,
+      maxConcurrency: 10,
+      categoryLanguage: 'zh',
       ignoreDomains: ['localhost', '127.0.0.1'], // 移除 github.com, 它的死链应该被检测
 
       // 默认 AI 选项
@@ -58,7 +62,8 @@ export const useSettingsStore = create<SettingsState>()(
             ignoreDomains: state.ignoreDomains.filter((d) => d !== domain),
           })),
         setMaxConcurrency: (count) =>
-          set({ maxConcurrency: Math.max(1, Math.min(20, count)) }), // 限制在 1~20 之间
+          set({ maxConcurrency: Math.max(1, Math.min(30, count)) }), // 限制在 1~30 之间
+        setCategoryLanguage: (lang: 'zh' | 'en') => set({ categoryLanguage: lang }),
         
         setActiveAiProvider: (p: 'gemini-cloud' | 'ollama') => set({ activeAiProvider: p }),
         setGeminiApiKey: (key: string) => set({ geminiApiKey: key.trim() }),
