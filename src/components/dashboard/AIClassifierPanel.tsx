@@ -231,11 +231,71 @@ export function AIClassifierPanel() {
 
   const acceptAll = async () => {
     const moveItems = items.filter((i) => i.result?.action === 'move');
-    // 使用并发队列限制 Chrome API 并发，避免超载导致操作失败
-    const queue = new ConcurrencyQueue(Math.min(maxConcurrency, 5));
-    await Promise.all(
-      moveItems.map((item) => queue.run(() => acceptSuggestion(item, true)))
-    );
+    if (moveItems.length === 0) return;
+
+    // ── 阶段1：收集所有需要创建/查找的文件夹路径，按路径去重 ──
+    const pathsNeedResolve = new Set<string>();
+    for (const item of moveItems) {
+      const fid = item.result!.suggestedFolderId;
+      if (fid === 'fallback_id_or_create_new' || fid === 'fallback') {
+        pathsNeedResolve.add(item.result!.suggestedFolderPath);
+      }
+    }
+
+    // ── 阶段2：按顺序创建/查找文件夹，构建 path→folderId 映射 ──
+    // 串行执行确保不会重复创建同名文件夹
+    const resolvedFolderMap = new Map<string, string>();
+    for (const path of pathsNeedResolve) {
+      try {
+        const folderId = await ensureFolderExists(path);
+        resolvedFolderMap.set(path, folderId);
+      } catch (err) {
+        console.error(`[acceptAll] 创建文件夹失败: ${path}`, err);
+        toast.error(t('ai.moveFailed', { err: `文件夹创建失败: ${path}` }));
+      }
+    }
+
+    // ── 阶段3：使用预解析的文件夹 ID 批量移动书签 ──
+    let movedCount = 0;
+    for (const item of moveItems) {
+      try {
+        let targetId = item.result!.suggestedFolderId;
+        if (targetId === 'fallback_id_or_create_new' || targetId === 'fallback') {
+          const resolved = resolvedFolderMap.get(item.result!.suggestedFolderPath);
+          if (!resolved) {
+            // 该路径的文件夹创建已在阶段2失败，跳过此书签
+            continue;
+          }
+          targetId = resolved;
+        }
+
+        const action = new MoveAction();
+        const undoInfo = await action.execute({
+          bookmarkId: item.id,
+          payload: { parentId: targetId }
+        });
+
+        if (undoInfo) {
+          addLog({
+            id: crypto.randomUUID(),
+            actionId: action.id,
+            description: t('ai.logDesc.move', { path: item.result!.suggestedFolderPath }),
+            undoInfo,
+            bookmarkTitle: item.title,
+            bookmarkUrl: item.url,
+            folderPath: item.currentPath,
+          });
+        }
+
+        setItems((prev) => prev.filter((i) => i.id !== item.id));
+        movedCount++;
+      } catch (err) {
+        console.error(`[acceptAll] 移动书签失败: ${item.title}`, err);
+        toast.error(t('ai.moveFailed', { err: String(err) }));
+      }
+    }
+
+    console.log(`[acceptAll] 完成：成功移动 ${movedCount}/${moveItems.length} 个书签`);
     refreshBookmarks();
   };
 
