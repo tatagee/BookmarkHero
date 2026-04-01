@@ -3,7 +3,7 @@ import { useSettingsStore, useSettingsActions } from '../../stores/settings.stor
 import { AIProviderFactory } from '../../core/providers';
 import { Button } from '../ui/button';
 import { useT } from '../../i18n';
-import { Settings2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Settings2, Loader2, CheckCircle2, AlertCircle, Sliders } from 'lucide-react';
 import { validateGeminiKey, validateOllamaUrl, sanitizeSettingValue } from '../../lib/validators';
 
 export function AIProviderSettings() {
@@ -49,23 +49,32 @@ export function AIProviderSettings() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-4 p-1 bg-muted rounded-lg w-max mb-6">
-        {providers.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => actions.setActiveAiProvider(p.id)}
-            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-              settings.activeAiProvider === p.id 
-                ? 'bg-background text-foreground shadow-sm' 
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
-      </div>
 
+      {/* ──────────────── 上半部分：模型连接 ──────────────── */}
       <div className="bg-card border rounded-lg p-6">
+        <h4 className="text-sm font-semibold flex items-center gap-2 mb-5">
+          <Settings2 className="w-4 h-4 text-primary" />
+          {settings.activeAiProvider === 'gemini-cloud' ? 'Gemini API' : 'Ollama'} — {t('settings.test.btn')}
+        </h4>
+
+        {/* Provider 切换 Tab */}
+        <div className="flex gap-4 p-1 bg-muted rounded-lg w-max mb-6">
+          {providers.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => actions.setActiveAiProvider(p.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                settings.activeAiProvider === p.id 
+                  ? 'bg-background text-foreground shadow-sm' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Gemini 配置 */}
         {settings.activeAiProvider === 'gemini-cloud' && (
           <div className="space-y-4">
             <div>
@@ -106,6 +115,7 @@ export function AIProviderSettings() {
           </div>
         )}
 
+        {/* Ollama 配置 */}
         {settings.activeAiProvider === 'ollama' && (
           <div className="space-y-4">
             <div>
@@ -143,73 +153,7 @@ export function AIProviderSettings() {
           </div>
         )}
 
-        <div className="col-span-full border-t border-border mt-4 pt-6 space-y-6">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <Settings2 className="w-4 h-4 text-primary" />
-            {t('settings.general.title')}
-          </h4>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-sm font-medium leading-none">
-                {t('settings.general.catLang')}
-              </label>
-              <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
-                <button
-                  onClick={() => actions.setCategoryLanguage('zh')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    settings.categoryLanguage === 'zh'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t('settings.general.catLangZh')}
-                </button>
-                <button
-                  onClick={() => actions.setCategoryLanguage('en')}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-                    settings.categoryLanguage === 'en'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {t('settings.general.catLangEn')}
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {t('settings.general.catLangTip')}
-              </p>
-            </div>
-            
-            <div className="space-y-4">
-              <div className="flex justify-between items-center mb-1">
-                <label className="text-sm font-medium flex items-center gap-1.5">
-                  {t('settings.general.concurrency', { count: settings.maxConcurrency })}
-                </label>
-              </div>
-              <div className="flex items-center gap-4 max-w-sm px-1 py-1">
-                <input
-                  type="range"
-                  min="1"
-                  max="30"
-                  step="1"
-                  value={settings.maxConcurrency}
-                  onChange={(e) => actions.setMaxConcurrency(parseInt(e.target.value, 10))}
-                  className="flex-1 w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-              <div className="flex justify-between text-[10px] text-muted-foreground/60 px-1">
-                <span>1</span>
-                <span>15</span>
-                <span>30</span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed mt-2">
-                {t('settings.general.concurTip')}
-              </p>
-            </div>
-          </div>
-        </div>
-
+        {/* 测试连接按钮 */}
         <div className="mt-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <Button
             onClick={handleTestConnection}
@@ -234,6 +178,106 @@ export function AIProviderSettings() {
               {testMessage}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* ──────────────── 下半部分：分类偏好 ──────────────── */}
+      <div className="bg-card border rounded-lg p-6">
+        <h4 className="text-sm font-semibold flex items-center gap-2 mb-5">
+          <Sliders className="w-4 h-4 text-primary" />
+          {t('settings.prefsTitle')}
+        </h4>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* 分类语言 */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium leading-none">
+              {t('settings.general.catLang')}
+            </label>
+            <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
+              <button
+                onClick={() => actions.setCategoryLanguage('zh')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  settings.categoryLanguage === 'zh'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('settings.general.catLangZh')}
+              </button>
+              <button
+                onClick={() => actions.setCategoryLanguage('en')}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  settings.categoryLanguage === 'en'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('settings.general.catLangEn')}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t('settings.general.catLangTip')}
+            </p>
+          </div>
+
+          {/* 最大分类层数 */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium leading-none">
+              {t('settings.general.maxDepth')}
+            </label>
+            <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
+              <button
+                onClick={() => actions.setMaxCategoryDepth(1)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  settings.maxCategoryDepth === 1
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('settings.general.maxDepth1')}
+              </button>
+              <button
+                onClick={() => actions.setMaxCategoryDepth(2)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  settings.maxCategoryDepth === 2
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {t('settings.general.maxDepth2')}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {t('settings.general.maxDepthTip')}
+            </p>
+          </div>
+          
+          {/* 最大并发 */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium leading-none">
+              {t('settings.general.concurrency', { count: settings.maxConcurrency })}
+            </label>
+            <div className="flex items-center gap-4 max-w-sm px-1 py-1">
+              <input
+                type="range"
+                min="1"
+                max="30"
+                step="1"
+                value={settings.maxConcurrency}
+                onChange={(e) => actions.setMaxConcurrency(parseInt(e.target.value, 10))}
+                className="flex-1 w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground/60 px-1">
+              <span>1</span>
+              <span>15</span>
+              <span>30</span>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+              {t('settings.general.concurTip')}
+            </p>
+          </div>
         </div>
       </div>
     </div>

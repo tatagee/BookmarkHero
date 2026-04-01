@@ -100,11 +100,11 @@ export default function Options() {
 
         {/* 底部政策链接区 */}
         <div className="flex justify-center gap-4 py-8 text-sm text-muted-foreground">
-          <a href="https://github.com/lyon/BookmarkHero/blob/main/privacy-policy.md" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors underline-offset-4 hover:underline">
+          <a href="https://tatagee.github.io/BookmarkHero/privacy-policy.html" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors underline-offset-4 hover:underline">
             Privacy Policy
           </a>
           <span>&middot;</span>
-          <a href="https://github.com/lyon/BookmarkHero/blob/main/terms-of-service.md" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors underline-offset-4 hover:underline">
+          <a href="https://github.com/tatagee/BookmarkHero/blob/main/terms-of-service.md" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors underline-offset-4 hover:underline">
             Terms of Service
           </a>
         </div>

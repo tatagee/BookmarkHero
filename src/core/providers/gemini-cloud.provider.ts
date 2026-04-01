@@ -94,7 +94,7 @@ export class GeminiCloudProvider implements IAIProvider {
     bookmark: { title: string; url: string; currentPath?: string },
     folders: { id: string; path: string }[]
   ): string {
-    const { categoryLanguage } = useSettingsStore.getState();
+    const { categoryLanguage, maxCategoryDepth } = useSettingsStore.getState();
     const folderListStr = folders.map((f) => `- ${f.path}`).join('\n');
     const currentLocation = bookmark.currentPath
       ? `当前所在位置：${bookmark.currentPath}`
@@ -109,6 +109,15 @@ export class GeminiCloudProvider implements IAIProvider {
     const categoryConstraint = categoryLanguage === 'en'
       ? 'CATEGORY RULE: Keep total top-level categories within 15-20 broad themes (e.g., Development, Design, Tools, Learning, Entertainment). Avoid overly granular sub-categories.'
       : '分类规则：总分类应控制在 15-20 个宏观大类之内（如：开发资源、设计素材、在线工具、学习笔记、娱乐休闲等），避免创建过于琐碎的微分类。';
+
+    // 层数约束指令
+    const depthConstraint = maxCategoryDepth === 1
+      ? (categoryLanguage === 'en'
+        ? 'DEPTH RULE: suggestedFolderPath MUST be exactly "Bookmarks Bar/<CategoryName>" with ONLY ONE level of folder after the root. NEVER use nested paths like "A/B/C".'
+        : '层数规则：suggestedFolderPath 必须严格为 "书签栏/<分类名>"，根目录后只允许一层文件夹。禁止使用 "A/B/C" 这样的嵌套路径。')
+      : (categoryLanguage === 'en'
+        ? 'DEPTH RULE: suggestedFolderPath can be at most "Bookmarks Bar/<Category>/<SubCategory>". Maximum 2 levels of folders after the root.'
+        : '层数规则：suggestedFolderPath 最多为 "书签栏/<大类>/<子类>"，根目录后最多两层文件夹。');
 
     // 根据语言选择示例
     const exampleMove = categoryLanguage === 'en'
@@ -149,6 +158,7 @@ export class GeminiCloudProvider implements IAIProvider {
 
 ${langInstruction}
 ${categoryConstraint}
+${depthConstraint}
 
 用户已有文件夹：
 <folders>
@@ -189,7 +199,15 @@ ${exampleKeep}`;
     currentPath?: string,
   ): ClassificationResult {
     const action = parsed.action === 'keep' ? 'keep' : 'move';
-    const suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
+    let suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
+
+    // 层数裁剪兜底：确保 AI 返回路径不超过用户设定的最大层数
+    const { maxCategoryDepth } = useSettingsStore.getState();
+    const parts = suggestedFolderPath.split('/');
+    // root (如 "Bookmarks Bar" / "书签栏") 占 1 个位置，后续 category 层占 maxCategoryDepth 个
+    if (parts.length > 1 + maxCategoryDepth) {
+      suggestedFolderPath = parts.slice(0, 1 + maxCategoryDepth).join('/');
+    }
 
     // 从给定的 folders 中找 id，防幻觉
     const matchedFolder = folders.find((f) => f.path === suggestedFolderPath);

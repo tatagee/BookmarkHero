@@ -25,7 +25,7 @@ export type TranslationKeys = {
   'stats.recentlyAdded': string; // + {count} 个新增 (近 30 天)
   'stats.folders': string;
   'stats.maxDepth': string; // 最大嵌套层级: {depth} 层
-  'stats.health评估': string;
+  'stats.healthAssessment': string;
   'stats.health.untested': string; // 未体检
   'stats.health.excellent': string; // 优秀
   'stats.health.good': string; // 良好
@@ -159,7 +159,12 @@ export type TranslationKeys = {
   'settings.general.catLang': string; // 📝 分类命名语言
   'settings.general.catLangZh': string; // 中文
   'settings.general.catLangEn': string; // English
-  'settings.general.catLangTip': string; // 控制 AI 建议的新文件夹使用的语言，已有文件夹名称不受影响。
+  'settings.general.catLangTip': string;
+  'settings.general.maxDepth': string;
+  'settings.general.maxDepth1': string;
+  'settings.general.maxDepth2': string;
+  'settings.general.maxDepthTip': string;
+  'settings.prefsTitle': string; // 控制 AI 建议的新文件夹使用的语言，已有文件夹名称不受影响。
   'settings.test.btn': string; // 测试连接
   'settings.test.testing': string; // 测试中...
   'settings.test.success': string; // 连接成功！AI 引擎已准备就绪。

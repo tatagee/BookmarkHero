@@ -6,6 +6,8 @@ import { chromeStorageAdapter } from '../shared/chrome-storage-adapter';
 export interface SettingsState {
   /** 允许并发的最大数 */
   maxConcurrency: number;
+  /** AI 分类建议的最大文件夹层数（1=单层扁平, 2=允许二级子目录） */
+  maxCategoryDepth: 1 | 2;
   /** 界面的展示语言 (目前只是开关状态) */
   uiLanguage: 'zh' | 'en';
   /** AI 建议分类文件夹的命名语言 */
@@ -26,6 +28,7 @@ export interface SettingsState {
     setMaxConcurrency: (count: number) => void;
     setUiLanguage: (lang: 'zh' | 'en') => void;
     setCategoryLanguage: (lang: 'zh' | 'en') => void;
+    setMaxCategoryDepth: (depth: 1 | 2) => void;
     
     // UI AI
     setActiveAiProvider: (providerId: 'gemini-cloud' | 'ollama') => void;
@@ -45,6 +48,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       maxConcurrency: 10,
+      maxCategoryDepth: 2,
       uiLanguage: 'zh',
       categoryLanguage: 'zh',
       ignoreDomains: ['localhost', '127.0.0.1'], // 移除 github.com, 它的死链应该被检测
@@ -69,6 +73,7 @@ export const useSettingsStore = create<SettingsState>()(
           set({ maxConcurrency: Math.max(1, Math.min(30, count)) }), // 限制在 1~30 之间
         setUiLanguage: (lang: 'zh' | 'en') => set({ uiLanguage: lang }),
         setCategoryLanguage: (lang: 'zh' | 'en') => set({ categoryLanguage: lang }),
+        setMaxCategoryDepth: (depth: 1 | 2) => set({ maxCategoryDepth: depth }),
         
         setActiveAiProvider: (p: 'gemini-cloud' | 'ollama') => set({ activeAiProvider: p }),
         setGeminiApiKey: (key: string) => set({ geminiApiKey: key.trim() }),

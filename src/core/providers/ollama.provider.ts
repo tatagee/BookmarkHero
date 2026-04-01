@@ -41,7 +41,7 @@ export class OllamaProvider implements IAIProvider {
     bookmark: { title: string; url: string; currentPath?: string },
     existingFolders: { id: string; path: string }[]
   ): Promise<ClassificationResult> {
-    const { ollamaUrl, ollamaModel, categoryLanguage } = useSettingsStore.getState();
+    const { ollamaUrl, ollamaModel, categoryLanguage, maxCategoryDepth } = useSettingsStore.getState();
 
     const folderListStr = existingFolders.map((f) => `- ${f.path}`).join('\n');
     const currentLocation = bookmark.currentPath
@@ -58,10 +58,20 @@ export class OllamaProvider implements IAIProvider {
       ? 'CATEGORY RULE: Keep top-level categories within 15-20 broad themes. Avoid granular sub-categories.'
       : '分类规则：总分类应控制在 15-20 个宏观大类之内，避免创建过于琐碎的微分类。';
 
+    // 层数约束指令
+    const depthConstraint = maxCategoryDepth === 1
+      ? (categoryLanguage === 'en'
+        ? 'DEPTH RULE: suggestedFolderPath MUST have ONLY ONE level of folder after the root. NEVER use nested paths like "A/B/C".'
+        : '层数规则：suggestedFolderPath 根目录后只允许一层文件夹。禁止使用 "A/B/C" 这样的嵌套路径。')
+      : (categoryLanguage === 'en'
+        ? 'DEPTH RULE: suggestedFolderPath can be at most 2 levels of folders after the root.'
+        : '层数规则：suggestedFolderPath 根目录后最多两层文件夹。');
+
     const prompt = `你是一个书签分类助手。请根据书签的标题、URL 和当前位置，判断该书签是否放在了合理的位置。
 
 ${langInstruction}
 ${categoryConstraint}
+${depthConstraint}
 
 用户已有文件夹：
 ${folderListStr}
@@ -137,7 +147,15 @@ ${currentLocation}
     currentPath?: string,
   ): ClassificationResult {
     const action = parsed.action === 'keep' ? 'keep' : 'move';
-    const suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
+    let suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
+
+    // 层数裁剪兜底
+    const { maxCategoryDepth } = useSettingsStore.getState();
+    const parts = suggestedFolderPath.split('/');
+    if (parts.length > 1 + maxCategoryDepth) {
+      suggestedFolderPath = parts.slice(0, 1 + maxCategoryDepth).join('/');
+    }
+
     const matchedFolder = folders.find((f) => f.path === suggestedFolderPath);
     
     let finalFolderId: string;

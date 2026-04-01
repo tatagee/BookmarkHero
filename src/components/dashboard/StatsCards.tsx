@@ -28,7 +28,7 @@ export function StatsCards() {
   const health = getHealthStatus();
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-4 grid-cols-2">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">{t('stats.totalBookmarks')}</CardTitle>
@@ -57,7 +57,7 @@ export function StatsCards() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">{t('stats.health评估')}</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('stats.healthAssessment')}</CardTitle>
           <Activity className={`h-4 w-4 ${health.color}`} />
         </CardHeader>
         <CardContent>
