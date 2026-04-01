@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# AI工具工作目录（Antigravity/Claude worktrees）
+.claude/
+
+# 测试覆盖率报告（自动生成，不需要跟踪）
+coverage/
