@@ -1,76 +1,85 @@
 # 🦸 BookmarkHero
 
-> 你的数字记忆助手。让保存的每一条信息，在需要时都能以最短路径找到。
+> Your intelligent bookmark management superhero for Chrome.
+> 你的智能 Chrome 书签管理助手。
 
-BookmarkHero 是一个智能 Chrome 书签管理扩展。帮助你检测死链、清理空文件夹、合并重复项，并通过 AI 对积压书签进行自动分类整理。
+BookmarkHero is a powerful Chrome extension that helps you detect dead links, clean up empty folders, merge duplicates, and intelligently organize your bookmarks with AI assistance.
 
-## ✨ 核心特性
+BookmarkHero 是一个强大的 Chrome 扩展，帮助你检测死链、清理空文件夹、合并重复书签，并通过 AI 智能分类整理你的书签。
 
-- **🩺 书签健康体检**: 极速扫描死链（4xx/5xx）、清理无用空文件夹。
-- **🔄 智能去重合并**: 识别内容相同或 URL 参数差异的重复书签。
-- **🤖 AI 智能分类**: 支持 Gemini Cloud 和本地 Ollama 模型，对书签进行自动分类整理，一键批量接受建议或逐条确认。
-- **📊 动态仪表盘**: 直观展示书签健康状况，支持操作日志与一键撤销。
-- **⚡ 双界面设计**:
-  - **Side Panel**: 轻量侧边栏，适合日常碎片化扫描和 AI 整理入口。
-  - **Options**: 全屏选项页，适合全局数据分析和批量深度整理。
+---
 
-## 🛠 技术栈
+## ✨ Features / 核心特性
 
-- **框架**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **构建**: [Vite](https://vitejs.dev/) + [CRXJS Vite Plugin](https://crxjs.dev/vite-plugin)
-- **样式**: [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)
-- **状态管理**: [Zustand](https://zustand-demo.pmnd.rs/)
-- **AI 支持**: Google Gemini API / Ollama (本地)
+| Feature | 功能 |
+|---------|------|
+| 🩺 **Health Check** — Scan dead links (4xx/5xx) and clean empty folders | **书签体检** — 检测死链，清理空文件夹 |
+| 🔄 **Duplicate Detection** — Find and merge bookmarks with identical URLs | **智能去重** — 发现并合并重复书签 |
+| 🤖 **AI Classification** — Auto-classify bookmarks using Gemini API or local Ollama | **AI 分类** — 通过 Gemini 或本地 Ollama 自动整理分类 |
+| 📊 **Dashboard** — Visual bookmark health stats with undo history | **动态看板** — 直观统计 + 操作日志与撤销 |
+| ⚡ **Dual Interface** — Side Panel for quick actions, Options for deep analysis | **双界面** — 侧边栏快速操作，选项页深度分析 |
 
-## 🚀 快速开始
+---
 
-### 1. 安装依赖
+## 🛠 Tech Stack / 技术栈
+
+- **Framework / 框架**: React 19 + TypeScript
+- **Build / 构建**: Vite + CRXJS Vite Plugin
+- **Styling / 样式**: Tailwind CSS + shadcn/ui
+- **State / 状态管理**: Zustand
+- **AI**: Google Gemini API / Ollama (local / 本地)
+
+---
+
+## 🚀 Getting Started / 快速开始
+
+### 1. Install dependencies / 安装依赖
 
 ```bash
 npm install
 ```
 
-### 2. 本地开发
-
-启动带有 HMR (热更新) 支持的开发服务器：
+### 2. Local development / 本地开发
 
 ```bash
 npm run dev
 ```
 
-1. 打开 Chrome 扩展管理页面 `chrome://extensions/`
-2. 开启右上角的 **"开发者模式"**
-3. 点击 **"加载已解压的扩展程序"**
-4. 选择项目根路径下的 `dist` 目录
+Then load the extension in Chrome / 然后在 Chrome 中加载扩展：
 
-*(开发期间代码变更后，扩展会自动重载)*
+1. Open `chrome://extensions/` / 打开 `chrome://extensions/`
+2. Enable **Developer mode** / 开启右上角 **开发者模式**
+3. Click **Load unpacked** / 点击 **加载已解压的扩展程序**
+4. Select the `dist` folder / 选择项目根目录下的 `dist` 文件夹
 
-### 3. 生产构建
+### 3. Production build / 生产构建
 
 ```bash
 npm run build
 ```
 
-执行后，`dist` 文件夹即刻打包为可供发布或分发的 Chrome 扩展产物。
-
-### 4. 运行测试
+### 4. Run tests / 运行测试
 
 ```bash
 npm run test
 ```
 
-## 📝 开发进度
+---
 
-- [x] **Phase 1 (基础健康)**: 死链检测、空文件夹清理、重复去重。
-- [x] **Phase 2 (AI 分类)**: 新书签自动分类（通知确认）+ 存量批量整理（快速/深度扫描模式）。
-- [ ] **Phase 3 (智能检索)**: 结合向量数据库的语义化搜索和网页内推荐。
-- [ ] **Phase 4 (知识网络)**: 数据看板强化和阅读习惯统计。
+## 📝 Roadmap / 开发进度
 
-## 📄 文档
-
-- [Privacy Policy](https://tatagee.github.io/BookmarkHero/privacy-policy.html)
-- [Terms of Service](./terms-of-service.md)
+- [x] **Phase 1** — Dead link detection, empty folder cleanup, duplicate merging / 死链检测、空文件夹清理、重复去重
+- [x] **Phase 2** — AI-powered bookmark classification (Gemini + Ollama) / AI 书签分类（Gemini + Ollama）
+- [ ] **Phase 3** — Semantic search & in-page recommendations / 语义搜索与网页内推荐
+- [ ] **Phase 4** — Enhanced analytics & reading habit insights / 数据看板强化与阅读习惯分析
 
 ---
 
-*由数字空间的探险家们打造，为每一位信息收藏家护航。*
+## 📄 Legal / 法律文件
+
+- [Privacy Policy / 隐私政策](https://tatagee.github.io/BookmarkHero/privacy-policy.html)
+- [Terms of Service / 使用条款](./terms-of-service.md)
+
+---
+
+*Built for every digital collector. / 为每一位信息收藏家打造。*
