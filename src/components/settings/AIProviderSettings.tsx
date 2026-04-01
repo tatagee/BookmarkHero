@@ -188,13 +188,13 @@ export function AIProviderSettings() {
           {t('settings.prefsTitle')}
         </h4>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="flex flex-col gap-6">
           {/* 分类语言 */}
           <div className="space-y-3">
             <label className="text-sm font-medium leading-none">
               {t('settings.general.catLang')}
             </label>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
+            <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit flex-wrap">
               <button
                 onClick={() => actions.setCategoryLanguage('zh')}
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -226,7 +226,7 @@ export function AIProviderSettings() {
             <label className="text-sm font-medium leading-none">
               {t('settings.general.maxDepth')}
             </label>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg w-max">
+            <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit flex-wrap">
               <button
                 onClick={() => actions.setMaxCategoryDepth(1)}
                 className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
