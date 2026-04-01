@@ -57,8 +57,8 @@ export default function Options() {
         </div>
 
         {/* 顶部总览和配置区 (默认折叠压缩空间) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <details name="top-panels" className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
             <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
               <span className="flex items-center gap-2"><BarChart2 className="w-5 h-5 text-primary" /> {t('section.overview')}</span>
               <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
@@ -68,7 +68,7 @@ export default function Options() {
             </div>
           </details>
 
-          <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
+          <details name="top-panels" className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
             <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
               <span className="flex items-center gap-2"><Settings className="w-5 h-5 text-primary" /> {t('section.settings')}</span>
               <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
