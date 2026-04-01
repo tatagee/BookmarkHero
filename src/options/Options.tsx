@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useBookmarkStore } from '../stores/bookmark.store';
 import { useScannerStore } from '../stores/scanner.store';
 import { useSettingsStore, useSettingsActions } from '../stores/settings.store';
@@ -18,6 +18,13 @@ export default function Options() {
   const scanners = useScannerStore(state => state.scanners);
   const clearResults = useScannerStore(state => state.clearResults);
   const uiLanguage = useSettingsStore(state => state.uiLanguage);
+  
+  // 共享式展开面板状态（手风琴模式）
+  const [activePanel, setActivePanel] = useState<'overview' | 'settings' | null>(null);
+
+  const togglePanel = (panel: 'overview' | 'settings') => {
+    setActivePanel(prev => prev === panel ? null : panel);
+  };
   const actions = useSettingsActions();
   const t = useT();
 
@@ -56,22 +63,30 @@ export default function Options() {
           </Button>
         </div>
 
-        {/* 顶部总览和配置区 (默认折叠压缩空间) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-          <details name="top-panels" className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
+        {/* 顶部总览和配置区 (共享式互斥展开) */}
+        <div className="flex flex-col gap-4">
+          <details 
+            open={activePanel === 'overview'}
+            onClick={(e) => { e.preventDefault(); togglePanel('overview'); }}
+            className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden"
+          >
             <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
               <span className="flex items-center gap-2"><BarChart2 className="w-5 h-5 text-primary" /> {t('section.overview')}</span>
-              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${activePanel === 'overview' ? 'rotate-180' : ''}`} />
             </summary>
             <div className="p-4 border-t px-6 pb-6">
                <StatsCards />
             </div>
           </details>
 
-          <details name="top-panels" className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
+          <details 
+            open={activePanel === 'settings'}
+            onClick={(e) => { e.preventDefault(); togglePanel('settings'); }}
+            className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden"
+          >
             <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
               <span className="flex items-center gap-2"><Settings className="w-5 h-5 text-primary" /> {t('section.settings')}</span>
-              <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${activePanel === 'settings' ? 'rotate-180' : ''}`} />
             </summary>
             <div className="p-4 border-t px-6 pb-6">
                <AIProviderSettings />
