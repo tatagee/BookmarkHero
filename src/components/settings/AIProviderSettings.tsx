@@ -188,19 +188,19 @@ export function AIProviderSettings() {
           {t('settings.prefsTitle')}
         </h4>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* 分类语言 */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card">
-            <div className="flex-1 pr-4">
-              <label className="text-sm font-semibold">{t('settings.general.catLang')}</label>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+            <div className="flex-1 pr-2">
+              <label className="text-[13px] font-semibold">{t('settings.general.catLang')}</label>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
                 {t('settings.general.catLangTip')}
               </p>
             </div>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg shrink-0">
+            <div className="flex gap-1 p-0.5 bg-muted rounded-lg shrink-0">
               <button
                 onClick={() => actions.setCategoryLanguage('zh')}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   settings.categoryLanguage === 'zh'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -210,7 +210,7 @@ export function AIProviderSettings() {
               </button>
               <button
                 onClick={() => actions.setCategoryLanguage('en')}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   settings.categoryLanguage === 'en'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -222,17 +222,17 @@ export function AIProviderSettings() {
           </div>
 
           {/* 最大分类层数 */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card">
-            <div className="flex-1 pr-4">
-              <label className="text-sm font-semibold">{t('settings.general.maxDepth')}</label>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+            <div className="flex-1 pr-2">
+              <label className="text-[13px] font-semibold">{t('settings.general.maxDepth')}</label>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
                 {t('settings.general.maxDepthTip')}
               </p>
             </div>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg shrink-0">
+            <div className="flex gap-1 p-0.5 bg-muted rounded-lg shrink-0">
               <button
                 onClick={() => actions.setMaxCategoryDepth(1)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   settings.maxCategoryDepth === 1
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -242,7 +242,7 @@ export function AIProviderSettings() {
               </button>
               <button
                 onClick={() => actions.setMaxCategoryDepth(2)}
-                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                   settings.maxCategoryDepth === 2
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -254,18 +254,18 @@ export function AIProviderSettings() {
           </div>
           
           {/* 最大并发 */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card">
-            <div className="flex-1 pr-4">
-              <label className="text-sm font-semibold">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+            <div className="flex-1 pr-2">
+              <label className="text-[13px] font-semibold">
                 {t('settings.general.concurrency', { count: settings.maxConcurrency })}
               </label>
-              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
                 {t('settings.general.concurTip')}
               </p>
             </div>
-            <div className="w-full sm:w-64 shrink-0 flex flex-col gap-2 pt-2 sm:pt-0">
+            <div className="w-full sm:w-40 shrink-0 flex flex-col pt-1 sm:pt-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">1</span>
+                <span className="text-[10px] text-muted-foreground">1</span>
                 <input
                   type="range"
                   min="1"
@@ -273,9 +273,9 @@ export function AIProviderSettings() {
                   step="1"
                   value={settings.maxConcurrency}
                   onChange={(e) => actions.setMaxConcurrency(parseInt(e.target.value, 10))}
-                  className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+                  className="flex-1 h-1.5 bg-muted rounded-lg appearance-none cursor-pointer"
                 />
-                <span className="text-xs text-muted-foreground">30</span>
+                <span className="text-[10px] text-muted-foreground">30</span>
               </div>
             </div>
           </div>
