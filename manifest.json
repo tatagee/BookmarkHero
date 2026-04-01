@@ -12,7 +12,6 @@
   },
   "permissions": [
     "bookmarks",
-    "sidePanel",
     "storage",
     "notifications"
   ],
@@ -29,23 +28,12 @@
     "service_worker": "src/background/index.ts",
     "type": "module"
   },
-  "side_panel": {
-    "default_path": "src/sidepanel/index.html"
-  },
+
   "options_page": "src/options/index.html",
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png"
-    }
-  },
-  "commands": {
-    "_execute_side_panel": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+B",
-        "mac": "Command+Shift+B"
-      },
-      "description": "Open BookmarkHero Side Panel"
     }
   }
 }

@@ -9,8 +9,17 @@ import { OperationLogPanel } from '../components/dashboard/OperationLogPanel';
 import { AIProviderSettings } from '../components/settings/AIProviderSettings';
 import { AIClassifierPanel } from '../components/dashboard/AIClassifierPanel';
 import { Button } from '../components/ui/button';
-import { RefreshCw, Settings, Search, BarChart2, ChevronDown } from 'lucide-react';
+import { RefreshCw, BarChart2, Search, Settings, ChevronDown } from 'lucide-react';
 import { Toaster } from 'sonner';
+
+type TabId = 'overview' | 'scanners' | 'settings';
+
+/** Tab 定义 */
+const TAB_DEFS: { id: TabId; icon: typeof BarChart2; labelKey: string }[] = [
+  { id: 'overview',  icon: BarChart2, labelKey: 'section.overview' },
+  { id: 'scanners',  icon: Search,    labelKey: 'section.scanners' },
+  { id: 'settings',  icon: Settings,  labelKey: 'section.settings' },
+];
 
 export default function Options() {
   const refreshBookmarks = useBookmarkStore(state => state.refreshBookmarks);
@@ -18,13 +27,14 @@ export default function Options() {
   const scanners = useScannerStore(state => state.scanners);
   const clearResults = useScannerStore(state => state.clearResults);
   const uiLanguage = useSettingsStore(state => state.uiLanguage);
-  
-  // 共享式展开面板状态（手风琴模式）
-  const [activePanel, setActivePanel] = useState<'overview' | 'settings' | null>(null);
 
-  const togglePanel = (panel: 'overview' | 'settings') => {
-    setActivePanel(prev => prev === panel ? null : panel);
+  // 互斥 Tab 状态：null = 全部收起
+  const [activeTab, setActiveTab] = useState<TabId | null>(null);
+
+  const toggleTab = (tab: TabId) => {
+    setActiveTab(prev => (prev === tab ? null : tab));
   };
+
   const actions = useSettingsActions();
   const t = useT();
 
@@ -33,7 +43,6 @@ export default function Options() {
   }, [refreshBookmarks]);
 
   // 刷新书签数据时，同步清空所有旧的扫描结果
-  // 因为书签已变更，之前的扫描结论不再可信
   const handleRefresh = () => {
     scanners.forEach(s => clearResults(s.id));
     refreshBookmarks();
@@ -63,47 +72,42 @@ export default function Options() {
           </Button>
         </div>
 
-        {/* 顶部总览和配置区 (共享式互斥展开) */}
-        <div className="flex flex-col gap-4">
-          <details 
-            open={activePanel === 'overview'}
-            onClick={(e) => { e.preventDefault(); togglePanel('overview'); }}
-            className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden"
-          >
-            <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
-              <span className="flex items-center gap-2"><BarChart2 className="w-5 h-5 text-primary" /> {t('section.overview')}</span>
-              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${activePanel === 'overview' ? 'rotate-180' : ''}`} />
-            </summary>
-            <div className="p-4 border-t px-6 pb-6">
-               <StatsCards />
-            </div>
-          </details>
-
-          <details 
-            open={activePanel === 'settings'}
-            onClick={(e) => { e.preventDefault(); togglePanel('settings'); }}
-            className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden"
-          >
-            <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
-              <span className="flex items-center gap-2"><Settings className="w-5 h-5 text-primary" /> {t('section.settings')}</span>
-              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${activePanel === 'settings' ? 'rotate-180' : ''}`} />
-            </summary>
-            <div className="p-4 border-t px-6 pb-6">
-               <AIProviderSettings />
-            </div>
-          </details>
-        </div>
-
-        {/* 旧版清理工具区 (默认折叠) */}
-        <details className="group bg-card border rounded-lg shadow-sm [&_summary::-webkit-details-marker]:hidden">
-          <summary className="flex items-center justify-between p-4 font-medium cursor-pointer list-none hover:bg-muted/50 transition-colors">
-            <span className="flex items-center gap-2"><Search className="w-5 h-5 text-primary" /> {t('section.scanners')}</span>
-            <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="p-4 border-t pb-6">
-             <ScannerPanel />
+        {/* ======= 三合一 Tab 栏 + 共享内容区 ======= */}
+        <div className="bg-card border rounded-lg shadow-sm overflow-hidden">
+          {/* Tab 按钮行 */}
+          <div className="flex border-b">
+            {TAB_DEFS.map(({ id, icon: Icon, labelKey }) => {
+              const isActive = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => toggleTab(id)}
+                  className={`
+                    flex-1 flex items-center justify-center gap-2 px-4 py-3
+                    text-sm font-medium cursor-pointer transition-colors
+                    ${isActive
+                      ? 'bg-primary/5 text-primary border-b-2 border-primary -mb-px'
+                      : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4" />
+                  {t(labelKey as any)}
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 opacity-70 ${isActive ? 'rotate-180' : ''}`} />
+                </button>
+              );
+            })}
           </div>
-        </details>
+
+          {/* 共享内容区 */}
+          {activeTab && (
+            <div className="p-4 sm:p-6 animate-in fade-in slide-in-from-top-1 duration-200">
+              {activeTab === 'overview' && <StatsCards />}
+              {activeTab === 'scanners' && <ScannerPanel />}
+              {activeTab === 'settings' && <AIProviderSettings />}
+            </div>
+          )}
+        </div>
 
         {/* 主视线高亮区：AI分类面板 */}
         <div className="pt-2">

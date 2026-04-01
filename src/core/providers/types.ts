@@ -12,16 +12,22 @@ export interface ClassificationResult {
   }[];
 }
 
+export interface ClassifyOptions {
+  mode: 'quick' | 'deep';
+}
+
 export interface IAIProvider {
   id: string;
   name: string;
   isAvailable(): Promise<boolean>;
   classify(
     bookmark: { title: string; url: string; currentPath?: string },
-    existingFolders: { id: string; path: string }[]
+    existingFolders: { id: string; path: string }[],
+    options?: ClassifyOptions
   ): Promise<ClassificationResult>;
   classifyBatch(
     bookmarks: { id: string; title: string; url: string; currentPath?: string }[],
-    existingFolders: { id: string; path: string }[]
+    existingFolders: { id: string; path: string }[],
+    options?: ClassifyOptions
   ): Promise<Map<string, ClassificationResult>>;
 }

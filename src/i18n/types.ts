@@ -38,15 +38,6 @@ export type TranslationKeys = {
   'stats.issuesDesc.noIssue': string; // 太棒了，未发现问题
   'stats.issuesDesc.untested': string; // 暂无数据，等待体检
 
-  // === SidePanel ===
-  'sidepanel.title': string;
-  'sidepanel.btnBigScreen': string; // ⚙️ 大屏统计
-  'sidepanel.miniStats.total': string; // 书签总量
-  'sidepanel.miniStats.folders': string; // 文件夹数
-  'sidepanel.ai.title': string;
-  'sidepanel.ai.desc': string;
-  'sidepanel.ai.btn': string;
-
   // === ScannerPanel ===
   'scanner.batchCleanBtn': string; // 一键清理全部 ({count})
   'scanner.batchCleanConfirm': string; // ⚠️ 确认清理全部 {count} 项？
@@ -138,6 +129,7 @@ export type TranslationKeys = {
 
   // === OperationLogPanel ===
   'log.title': string; // 操作历史
+  'log.empty': string; // 暂无操作历史
   'log.clearAll': string; // 清空记录
   'log.undoneMark': string; // 已撤销
   'log.btnUndo': string; // 撤销

@@ -120,12 +120,28 @@ export async function removeBookmarkTree(id: string): Promise<void> {
   });
 }
 
+// --- 全局锁：防止并发调用 ensureFolderExists 产生重复文件夹 ---
+let folderCreationLock = Promise.resolve();
+
+function acquireFolderLock(): Promise<() => void> {
+  return new Promise((resolve) => {
+    let release!: () => void;
+    const nextLock = new Promise<void>((res) => { release = res; });
+    folderCreationLock.then(() => {
+      resolve(release);
+    });
+    // @ts-ignore
+    folderCreationLock = nextLock;
+  });
+}
+
 /**
  * 确保指定的书签文件夹路径存在，如果不存在则自动创建，返回最终的 folderId
+ * 增加并发锁：防止多个请求同时看到“文件夹不存在”并同时创建该文件夹
  * @param path 文件夹路径，例如 '书签栏/开发资源/前端'
  */
 export async function ensureFolderExists(path: string): Promise<string> {
-  const parts = path.split('/').filter(Boolean);
+  const parts = path.split('/').map(p => p.trim()).filter(Boolean);
 
   if (parts.length > 10) {
     throw new Error(`[ensureFolderExists] Folder path too deep (${parts.length} levels). Maximum allowed is 10.`);
@@ -134,12 +150,14 @@ export async function ensureFolderExists(path: string): Promise<string> {
     throw new Error('[ensureFolderExists] Folder name too long. Maximum allowed is 100 characters per folder.');
   }
 
-  if (parts.length === 0) return '1'; // 如果传空，默认返回常理上的书签栏 ID
+  if (parts.length === 0) return '2'; // 如果传空，默认返回常理上的“其他书签” ID
 
-  const tree = await getBookmarkTree();
-  // root 节点包含所有顶层（书签栏 1，其他书签 2等）
+  const unlock = await acquireFolderLock();
+  try {
+    const tree = await getBookmarkTree();
+    // root 节点包含所有顶层（书签栏 1，其他书签 2等）
   
-  let currentParentId = '1'; // 默认从书签栏开始找
+  let currentParentId = '2'; // 默认从其他书签开始找
   let currentNodes = tree[0]?.children || [];
 
   for (let i = 0; i < parts.length; i++) {
@@ -181,4 +199,7 @@ export async function ensureFolderExists(path: string): Promise<string> {
   }
 
   return currentParentId;
+  } finally {
+    unlock();
+  }
 }

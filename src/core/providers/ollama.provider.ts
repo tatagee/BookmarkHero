@@ -1,4 +1,4 @@
-import type { ClassificationResult, IAIProvider } from './types';
+import type { ClassificationResult, IAIProvider, ClassifyOptions } from './types';
 import { useSettingsStore } from '../../stores/settings.store';
 
 export class OllamaProvider implements IAIProvider {
@@ -39,14 +39,24 @@ export class OllamaProvider implements IAIProvider {
 
   async classify(
     bookmark: { title: string; url: string; currentPath?: string },
-    existingFolders: { id: string; path: string }[]
+    existingFolders: { id: string; path: string }[],
+    options?: ClassifyOptions
   ): Promise<ClassificationResult> {
     const { ollamaUrl, ollamaModel, categoryLanguage, maxCategoryDepth } = useSettingsStore.getState();
 
     const folderListStr = existingFolders.map((f) => `- ${f.path}`).join('\n');
-    const currentLocation = bookmark.currentPath
+    let currentLocation = bookmark.currentPath
       ? `当前所在位置：${bookmark.currentPath}`
       : '当前所在位置：未分类（根目录）';
+
+    const isDeepMode = options?.mode === 'deep';
+    let deepModeInstruction = '';
+    if (isDeepMode) {
+      currentLocation = '注意：当前执行的是强制重组分类任务，请忽略其当前所在位置。';
+      deepModeInstruction = categoryLanguage === 'en'
+        ? '\nDEEP REORGANIZATION MODE: You must act as the system reorganizer. Ignore the bookmark\'s current nested folder location. You MUST return action "move" and provide the best new root-level or flat category based ONLY on its title and URL. Do NOT return "keep".\n'
+        : '\n强制重组模式：这是一个强制打乱重组的任务。无论该书签当前是否已被分类在某个子文件夹中，你都必须忽略原有位置。你必须强行分配一个符合最新分类规划树的全新的、合适的最佳类别，必须返回 action "move"，绝不可返回 "keep"！\n';
+    }
 
     // 语言控制指令
     const langInstruction = categoryLanguage === 'en'
@@ -68,7 +78,7 @@ export class OllamaProvider implements IAIProvider {
         : '层数规则：suggestedFolderPath 根目录后最多两层文件夹。');
 
     const prompt = `你是一个书签分类助手。请根据书签的标题、URL 和当前位置，判断该书签是否放在了合理的位置。
-
+${deepModeInstruction}
 ${langInstruction}
 ${categoryConstraint}
 ${depthConstraint}
@@ -82,8 +92,9 @@ URL：${bookmark.url}
 ${currentLocation}
 
 判断规则：
-1. 如果当前位置已经合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径
-2. 如果当前位置不合理 → action 设为 "move"，suggestedFolderPath 设为建议路径
+${isDeepMode 
+  ? '1. 你必须强行分配一个符合分类规则的新路径，action 必须设为 "move"。\n2. suggestedFolderPath 设为你建议的最佳路径。' 
+  : '1. 如果当前位置已经合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径\n2. 如果当前位置不合理 → action 设为 "move"，suggestedFolderPath 设为建议路径'}
 
 请严格仅以JSON格式输出，不带markdown块：
 {
@@ -118,7 +129,7 @@ ${currentLocation}
 
       const data = await resp.json();
       const parsed = JSON.parse(data.response);
-      return this.validateResponse(parsed, existingFolders, bookmark.currentPath);
+      return this.validateResponse(parsed, existingFolders, bookmark.currentPath, options);
     } catch (error) {
       console.error('[OllamaProvider] Classify error:', error);
       throw new Error(`Ollama 分类失败: ${error instanceof Error ? error.message : String(error)}`);
@@ -127,12 +138,13 @@ ${currentLocation}
 
   async classifyBatch(
     bookmarks: { id: string; title: string; url: string; currentPath?: string }[],
-    existingFolders: { id: string; path: string }[]
+    existingFolders: { id: string; path: string }[],
+    options?: ClassifyOptions
   ): Promise<Map<string, ClassificationResult>> {
     const results = new Map<string, ClassificationResult>();
     for (const b of bookmarks) {
       try {
-        const res = await this.classify(b, existingFolders);
+        const res = await this.classify(b, existingFolders, options);
         results.set(b.id, res);
       } catch (err) {
         console.warn(`[OllamaProvider] Failed to classify ${b.id}:`, err);
@@ -145,8 +157,12 @@ ${currentLocation}
     parsed: Record<string, unknown>,
     folders: { id: string; path: string }[],
     currentPath?: string,
+    options?: ClassifyOptions
   ): ClassificationResult {
-    const action = parsed.action === 'keep' ? 'keep' : 'move';
+    let action: 'keep' | 'move' = parsed.action === 'keep' ? 'keep' : 'move';
+    if (options?.mode === 'deep') {
+      action = 'move';
+    }
     let suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
 
     // 层数裁剪兜底

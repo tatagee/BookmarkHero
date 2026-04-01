@@ -40,15 +40,6 @@ export const zh: TranslationKeys = {
   'stats.issuesDesc.noIssue': '太棒了，未发现问题',
   'stats.issuesDesc.untested': '暂无数据，等待体检',
 
-  // === SidePanel ===
-  'sidepanel.title': 'BookmarkHero',
-  'sidepanel.btnBigScreen': '⚙️ 大屏统计',
-  'sidepanel.miniStats.total': '书签总量',
-  'sidepanel.miniStats.folders': '文件夹数',
-  'sidepanel.ai.title': '✨ AI 智能分类',
-  'sidepanel.ai.desc': '利用 AI 分析杂乱的书签树，自动创建最佳文件夹层级，让收藏井井有条。',
-  'sidepanel.ai.btn': '去大屏整理',
-
   // === ScannerPanel ===
   'scanner.batchCleanBtn': '一键清理全部 ({count})',
   'scanner.batchCleanConfirm': '⚠️ 确认清理全部 {count} 项？',
@@ -109,9 +100,9 @@ export const zh: TranslationKeys = {
   'ai.title': 'AI 智能整理',
   'ai.subtitle': '一键扫描并分析，自动找出需要重新归类的书签。',
   'ai.mode.quick': '快速',
-  'ai.mode.quickTip': '只分析根目录下的松散书签（速度快、API调用少）',
-  'ai.mode.deep': '深度',
-  'ai.mode.deepTip': '分析所有书签（全面但较慢，API调用较多）',
+  'ai.mode.quickTip': '只整理外层未分类的松散书签（速度快）',
+  'ai.mode.deep': '审查',
+  'ai.mode.deepTip': '审查并纠正已分类的书签（仅建议调整放错的内容）',
   'ai.includeBookmarksBar': '包含书签栏',
   'ai.includeBookmarksBarTip': '书签栏是高频区域，默认不参与整理',
   'ai.btnStart': '开始整理',
@@ -135,11 +126,12 @@ export const zh: TranslationKeys = {
   'ai.logDesc.move': '将书签移动至 "{path}"',
   'ai.moveFailed': '移动失败: {err}',
   'ai.guide.title': '选择模式后点击「开始整理」',
-  'ai.guide.quick': '快速模式：只分析根目录下的松散书签（推荐首次使用）',
-  'ai.guide.deep': '深度模式：审查所有书签的分类是否合理（API 调用较多）',
+  'ai.guide.quick': '快速模式：自动把外层未归类的松散书签放入合适的文件夹中。',
+  'ai.guide.deep': '审查模式：复查分类文件夹内的书签，仅当分类明显不合理时才建议调整，修复多次整理导致的混乱。',
 
   // === OperationLogPanel ===
   'log.title': '操作历史',
+  'log.empty': '暂无操作历史',
   'log.clearAll': '清空记录',
   'log.undoneMark': '已撤销',
   'log.btnUndo': '撤销',

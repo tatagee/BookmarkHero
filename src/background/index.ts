@@ -1,10 +1,9 @@
 /**
  * BookmarkHero Background Service Worker
  *
- * 职责：
  * 1. 响应来自前端页面的消息（如死链检测请求）
  * 2. 在扩展权限上下文中发起跨域 fetch 请求（host_permissions 在此处生效）
- * 3. 管理 Side Panel 打开行为
+ * 3. 监听扩展图标点击，打开 Options 页面
  */
 
 import type { DeadLinkCheckPayload, DeadLinkResultPayload, UrlCheckResult } from '../shared/messages';
@@ -14,8 +13,10 @@ import { getT } from '../i18n';
 
 import { checkUrlAlive } from './utils';
 
-// 让点击插件图标时打开 Side Panel
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
+// 让点击插件图标时直接打开此全屏选项页
+chrome.action.onClicked.addListener(() => {
+  chrome.runtime.openOptionsPage();
+});
 
 if (import.meta.env.DEV) {
   console.log('[BookmarkHero] Background service worker started.');

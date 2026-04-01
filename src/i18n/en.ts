@@ -40,15 +40,6 @@ export const en: TranslationKeys = {
   'stats.issuesDesc.noIssue': 'Great! No issues found.',
   'stats.issuesDesc.untested': 'No data, pending scan',
 
-  // === SidePanel ===
-  'sidepanel.title': 'BookmarkHero',
-  'sidepanel.btnBigScreen': '⚙️ Full Stats',
-  'sidepanel.miniStats.total': 'Bookmarks',
-  'sidepanel.miniStats.folders': 'Folders',
-  'sidepanel.ai.title': '✨ AI Organizer',
-  'sidepanel.ai.desc': 'Let AI analyze your messy bookmarks and suggest a clean hierarchical structure.',
-  'sidepanel.ai.btn': 'Open Full View',
-
   // === ScannerPanel ===
   'scanner.batchCleanBtn': 'Clean All ({count})',
   'scanner.batchCleanConfirm': '⚠️ Confirm cleaning {count} items?',
@@ -109,9 +100,9 @@ export const en: TranslationKeys = {
   'ai.title': 'AI AI-Organizer',
   'ai.subtitle': 'One-click scan and analyze to find bookmarks that need re-categorization.',
   'ai.mode.quick': 'Quick',
-  'ai.mode.quickTip': 'Only analyzes loose bookmarks in the root folder (Fast, few API calls)',
-  'ai.mode.deep': 'Deep',
-  'ai.mode.deepTip': 'Analyzes all bookmarks (Thorough but slower, many API calls)',
+  'ai.mode.quickTip': 'Organize uncategorized loose bookmarks (Fast)',
+  'ai.mode.deep': 'Review',
+  'ai.mode.deepTip': 'Review and correct categorized bookmarks (Only moving misplacements)',
   'ai.includeBookmarksBar': 'Include Bookmarks Bar',
   'ai.includeBookmarksBarTip': 'The Bookmarks Bar is highly used, excluded by default.',
   'ai.btnStart': 'Start AI Organize',
@@ -135,11 +126,12 @@ export const en: TranslationKeys = {
   'ai.logDesc.move': 'Moved bookmark to "{path}"',
   'ai.moveFailed': 'Move failed: {err}',
   'ai.guide.title': 'Select mode and click "Start Organize"',
-  'ai.guide.quick': 'Quick Mode: Only analyzes loose root bookmarks (Recommended first time)',
-  'ai.guide.deep': 'Deep Mode: Complete structure checkup (Higher API usage)',
+  'ai.guide.quick': 'Quick Mode: Organize loose root bookmarks (Fast & Recommended).',
+  'ai.guide.deep': 'Review Mode: Re-check bookmarks already in folders to fix previous organization messes.',
 
   // === OperationLogPanel ===
   'log.title': 'Operation History',
+  'log.empty': 'No operation history',
   'log.clearAll': 'Clear All',
   'log.undoneMark': 'Undone',
   'log.btnUndo': 'Undo',

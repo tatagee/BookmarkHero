@@ -47,14 +47,17 @@ function collectRootBookmarks(
   return items;
 }
 
-/** 递归遍历全树，收集所有带 URL 的书签（深度模式） */
+/** 递归遍历全树，收集所有分类文件夹中的带 URL 书签（深度模式） 
+ * @param isRootLevel 是否是根节点直挂的内容。我们将排除这部分，因为那是“快速整理”的职责。
+ */
 function collectAllBookmarks(
   nodes: chrome.bookmarks.BookmarkTreeNode[],
-  currentPath: string
+  currentPath: string,
+  isRootLevel: boolean = false
 ): BookmarkItem[] {
   const items: BookmarkItem[] = [];
   for (const node of nodes) {
-    if (node.url) {
+    if (node.url && !isRootLevel) {
       items.push({
         id: node.id,
         title: node.title,
@@ -64,7 +67,7 @@ function collectAllBookmarks(
     }
     if (node.children) {
       const nextPath = currentPath ? `${currentPath}/${node.title}` : node.title;
-      items.push(...collectAllBookmarks(node.children, nextPath));
+      items.push(...collectAllBookmarks(node.children, nextPath, false));
     }
   }
   return items;
@@ -120,24 +123,26 @@ export function AIClassifierPanel() {
       // 快速模式：包含所有根节点下直接挂的松散书签
       collected = collectRootBookmarks(rootNodes);
     } else {
-      // 深度模式：遍历全树
+      // 深度模式：遍历全树子节点 (审查已分类书签，排除根目录松散书签)
       const all: BookmarkItem[] = [];
       for (const root of rootNodes) {
-        all.push(...collectAllBookmarks(root.children || [], root.title));
+        all.push(...collectAllBookmarks(root.children || [], root.title, true));
       }
       collected = all;
     }
 
     if (collected.length === 0) {
+      toast.info('未能提取到任何书签。如果您的书签都在书签栏中，请勾选「包含书签栏」后再试。');
       setIsRunning(false);
       return;
     }
 
     setProgress({ done: 0, total: collected.length });
 
-    // 2. 立刻批量调用 AI 分析，用并发队列限流
-    const service = new ClassificationService();
-    await service.preloadFolders(); // 预加载文件夹列表，所有并发分析复用同一份缓存
+    try {
+      // 2. 立刻批量调用 AI 分析，用并发队列限流
+      const service = new ClassificationService();
+      await service.preloadFolders(); // 预加载文件夹列表，所有并发分析复用同一份缓存
     const queue = new ConcurrencyQueue(maxConcurrency);
     queueRef.current = queue;
     const results: BookmarkItem[] = [];
@@ -149,7 +154,7 @@ export function AIClassifierPanel() {
           title: item.title,
           url: item.url,
           currentPath: item.currentPath,
-        });
+        }, { mode: scanMode });
         results.push({ ...item, result: res });
       } catch (err) {
         console.error(`[AI整理] ${item.title} 分析失败:`, err);
@@ -162,6 +167,10 @@ export function AIClassifierPanel() {
 
     await Promise.all(tasks.map((t) => queue.run(t)));
 
+    if (results.length === 0 && collected.length > 0) {
+      toast.error('全部分析均失败，可能是 API 额度不足 (429) 或网络连接存在问题。详情请查看扩展程序的控制台日志。');
+    }
+
     // 3. 按 move 优先排序结果
     results.sort((a, b) => {
       if (a.result?.action === 'move' && b.result?.action !== 'move') return -1;
@@ -169,9 +178,14 @@ export function AIClassifierPanel() {
       return (b.result?.confidence ?? 0) - (a.result?.confidence ?? 0);
     });
 
-    setItems(results);
-    setIsRunning(false);
-    queueRef.current = null;
+      setItems(results);
+      queueRef.current = null;
+    } catch (err) {
+      console.error('[AIClassifierPanel] handleStart error:', err);
+      toast.error(String(err));
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const handleStop = () => {

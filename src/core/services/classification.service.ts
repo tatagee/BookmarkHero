@@ -1,5 +1,5 @@
 import { AIProviderFactory } from '../providers';
-import type { ClassificationResult } from '../providers/types';
+import type { ClassificationResult, ClassifyOptions } from '../providers/types';
 import { useSettingsStore } from '../../stores/settings.store';
 import { getBookmarkTree } from '../../shared/chrome-api';
 import { getT } from '../../i18n';
@@ -50,9 +50,14 @@ export class ClassificationService {
     const providerId = useSettingsStore.getState().activeAiProvider;
     const provider = AIProviderFactory.createProvider(providerId);
     this.availabilityPromise = provider.isAvailable();
+    const isAvail = await this.availabilityPromise;
+    if (!isAvail) {
+      const t = getT();
+      throw new Error(t('ai.provider.unavailable', { name: provider.name }));
+    }
   }
 
-  async classify(bookmark: { title: string; url: string; currentPath?: string }): Promise<ClassificationResult> {
+  async classify(bookmark: { title: string; url: string; currentPath?: string }, options?: ClassifyOptions): Promise<ClassificationResult> {
     const providerId = useSettingsStore.getState().activeAiProvider;
     const provider = AIProviderFactory.createProvider(providerId);
 
@@ -74,6 +79,6 @@ export class ClassificationService {
     }
 
     // Call the active AI provider
-    return provider.classify(bookmark, folders);
+    return provider.classify(bookmark, folders, options);
   }
 }
