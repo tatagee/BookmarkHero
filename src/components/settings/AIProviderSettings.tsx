@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSettingsStore, useSettingsActions } from '../../stores/settings.store';
 import { AIProviderFactory } from '../../core/providers';
 import { Button } from '../ui/button';
@@ -15,10 +15,8 @@ export function AIProviderSettings() {
   const [testMessage, setTestMessage] = useState('');
   const [valErrors, setValErrors] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    setTestStatus('idle');
-    setTestMessage('');
-  }, [settings.activeAiProvider]);
+  // Removed useEffect to prevent cascading renders
+
 
   const providers = AIProviderFactory.getAvailableProviders();
 
@@ -62,7 +60,11 @@ export function AIProviderSettings() {
           {providers.map((p) => (
             <button
               key={p.id}
-              onClick={() => actions.setActiveAiProvider(p.id)}
+              onClick={() => {
+                actions.setActiveAiProvider(p.id);
+                setTestStatus('idle');
+                setTestMessage('');
+              }}
               className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                 settings.activeAiProvider === p.id 
                   ? 'bg-background text-foreground shadow-sm' 

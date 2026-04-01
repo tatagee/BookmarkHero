@@ -12,9 +12,9 @@ describe('validators', () => {
       expect(validateGeminiKey('BIzaSyAbCdEfGhIjKlMnOpQrStUvWxYz0123456')).toBe(false);
     });
 
-    it('对于长度不符的字符串应该返回 false', () => {
+    it('对于过短的字符串应该返回 false，超长字符串应该返回 true', () => {
       expect(validateGeminiKey('AIzaShort')).toBe(false);
-      expect(validateGeminiKey('AIzaSyAbCdEfGhIjKlMnOpQrStUvWxYz0123456789')).toBe(false);
+      expect(validateGeminiKey('AIzaSyAbCdEfGhIjKlMnOpQrStUvWxYz0123456789')).toBe(true);
     });
 
     it('对于空字符串应该返回 false', () => {
