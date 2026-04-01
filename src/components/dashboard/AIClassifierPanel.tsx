@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useBookmarkStore } from '../../stores/bookmark.store';
 import { ClassificationService } from '../../core/services/classification.service';
 import type { ClassificationResult } from '../../core/providers/types';
@@ -10,6 +10,7 @@ import { useSettingsStore } from '../../stores/settings.store';
 import { useLogStore } from '../../stores/log.store';
 import { MoveAction } from '../../core/actions/move.action';
 import { useT } from '../../i18n';
+import { toast } from 'sonner';
 
 // === 数据模型 ===
 
@@ -80,6 +81,15 @@ export function AIClassifierPanel() {
   const [hasRun, setHasRun] = useState(false);
   const [includeBookmarksBar, setIncludeBookmarksBar] = useState(false);
 
+  const queueRef = useRef<ConcurrencyQueue | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // 卸载时中止队列，防内存泄漏
+      queueRef.current?.abort();
+    };
+  }, []);
+
   const tree = useBookmarkStore((state) => state.tree);
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
   const maxConcurrency = useSettingsStore((state) => state.maxConcurrency);
@@ -129,6 +139,7 @@ export function AIClassifierPanel() {
     const service = new ClassificationService();
     await service.preloadFolders(); // 预加载文件夹列表，所有并发分析复用同一份缓存
     const queue = new ConcurrencyQueue(maxConcurrency);
+    queueRef.current = queue;
     const results: BookmarkItem[] = [];
     let completed = 0;
 
@@ -160,10 +171,17 @@ export function AIClassifierPanel() {
 
     setItems(results);
     setIsRunning(false);
+    queueRef.current = null;
+  };
+
+  const handleStop = () => {
+    queueRef.current?.abort();
+    setIsRunning(false);
+    queueRef.current = null;
   };
 
   // === 接受建议 ===
-  const acceptSuggestion = async (item: BookmarkItem) => {
+  const acceptSuggestion = async (item: BookmarkItem, skipRefresh = false) => {
     if (!item.result || item.result.action === 'keep') return;
 
     try {
@@ -191,17 +209,20 @@ export function AIClassifierPanel() {
       }
 
       setItems((prev) => prev.filter((i) => i.id !== item.id));
-      refreshBookmarks();
+      if (!skipRefresh) refreshBookmarks();
     } catch (err) {
-      alert(t('ai.moveFailed', { err: String(err) }));
+      toast.error(t('ai.moveFailed', { err: String(err) }));
     }
   };
 
   const acceptAll = async () => {
     const moveItems = items.filter((i) => i.result?.action === 'move');
-    for (const item of moveItems) {
-      await acceptSuggestion(item);
-    }
+    // 使用并发队列限制 Chrome API 并发，避免超载导致操作失败
+    const queue = new ConcurrencyQueue(Math.min(maxConcurrency, 5));
+    await Promise.all(
+      moveItems.map((item) => queue.run(() => acceptSuggestion(item, true)))
+    );
+    refreshBookmarks();
   };
 
   // === 统计 & 过滤 ===
@@ -291,16 +312,16 @@ export function AIClassifierPanel() {
             {t('ai.includeBookmarksBar')}
           </label>
 
-          <Button onClick={handleStart} disabled={isRunning}>
-            {isRunning ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                {t('ai.btnAnalyzing', { done: progress.done, total: progress.total })}
-              </>
-            ) : (
-              t('ai.btnStart')
-            )}
-          </Button>
+          {isRunning ? (
+            <Button variant="destructive" onClick={handleStop}>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              {t('common.cancel')} ({progress.done}/{progress.total})
+            </Button>
+          ) : (
+            <Button onClick={handleStart}>
+              {t('ai.btnStart')}
+            </Button>
+          )}
         </div>
       </div>
 

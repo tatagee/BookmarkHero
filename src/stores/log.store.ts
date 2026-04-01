@@ -4,6 +4,7 @@ import { STORAGE_KEYS } from '../shared/constants';
 import type { OperationLog } from '../core/actions/types';
 import { DeleteAction } from '../core/actions/delete.action';
 import { MoveAction } from '../core/actions/move.action';
+import { chromeStorageAdapter } from '../shared/chrome-storage-adapter';
 
 export interface LogState {
   logs: OperationLog[];
@@ -83,18 +84,7 @@ export const useLogStore = create<LogState>()(
     }),
     {
       name: STORAGE_KEYS.OPERATION_LOGS,
-      storage: createJSONStorage(() => ({
-        getItem: async (name) => {
-          const result = await chrome.storage.local.get(name);
-          return (result[name] as string) || null;
-        },
-        setItem: async (name, value) => {
-          await chrome.storage.local.set({ [name]: value });
-        },
-        removeItem: async (name) => {
-          await chrome.storage.local.remove(name);
-        },
-      })),
+      storage: createJSONStorage(() => chromeStorageAdapter),
     }
   )
 );

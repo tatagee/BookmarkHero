@@ -12,6 +12,8 @@ import { ClassificationService } from '../core/services/classification.service';
 import { moveBookmark, ensureFolderExists } from '../shared/chrome-api';
 import { getT } from '../i18n';
 
+import { checkUrlAlive } from './utils';
+
 // 让点击插件图标时打开 Side Panel
 chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
@@ -19,59 +21,7 @@ if (import.meta.env.DEV) {
   console.log('[BookmarkHero] Background service worker started.');
 }
 
-/**
- * 检测单个 URL 是否存活
- * 在 background 中执行，拥有 host_permissions，无需 no-cors
- */
-async function checkUrlAlive(
-  url: string,
-  timeoutMs: number
-): Promise<{ alive: boolean; statusCode?: number; error?: string }> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    // 步骤1: 轻量的 HEAD 请求
-    const headResponse = await fetch(url, {
-      method: 'HEAD',
-      redirect: 'follow',
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
-
-    if (headResponse.ok || (headResponse.status >= 200 && headResponse.status < 400)) {
-      return { alive: true, statusCode: headResponse.status };
-    }
-
-    // 步骤2: HEAD 失败，fallback 到 GET（有些服务器禁止 HEAD 请求）
-    if (import.meta.env.DEV) {
-      console.debug(`[DeadLink] HEAD failed (${headResponse.status}), fallback to GET: ${url}`);
-    }
-    const getController = new AbortController();
-    const getTimer = setTimeout(() => getController.abort(), timeoutMs);
-    const getResponse = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      signal: getController.signal,
-      headers: {
-        'Range': 'bytes=0-1023', // P1-3 优化: 只验证连通性
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 BookmarkHero/1.0',
-      },
-    });
-    clearTimeout(getTimer);
-
-    if (getResponse.ok) {
-      return { alive: true, statusCode: getResponse.status };
-    }
-    return { alive: false, statusCode: getResponse.status };
-  } catch (err: unknown) {
-    clearTimeout(timer);
-    if (err instanceof Error && err.name === 'AbortError') {
-      return { alive: false, error: 'TIMEOUT' };
-    }
-    return { alive: false, error: err instanceof Error ? err.message : String(err) };
-  }
-}
+// url checking is now imported
 
 /**
  * 监听来自前端页面（SidePanel/Options）的消息
@@ -87,20 +37,29 @@ chrome.runtime.onMessage.addListener(
 
       // 异步处理并批量返回结果
       (async () => {
-        const results: UrlCheckResult[] = [];
-        // 逐个检测（background 中不担心 UI 线程阻塞，可使用批量 Promise.all）
-        await Promise.all(
-          payload.urls.map(async ({ bookmarkId, url }) => {
-            const result = await checkUrlAlive(url, payload.timeoutMs);
-            results.push({ bookmarkId, url, ...result });
-          })
-        );
+        try {
+          const results: UrlCheckResult[] = [];
+          // 逐个检测（background 中不担心 UI 线程阻塞，可使用批量 Promise.all）
+          await Promise.all(
+            payload.urls.map(async ({ bookmarkId, url }) => {
+              const result = await checkUrlAlive(url, payload.timeoutMs);
+              results.push({ bookmarkId, url, ...result });
+            })
+          );
 
-        const response: DeadLinkResultPayload = {
-          requestId: payload.requestId,
-          results,
-        };
-        sendResponse(response);
+          const response: DeadLinkResultPayload = {
+            requestId: payload.requestId,
+            results,
+          };
+          sendResponse(response);
+        } catch (err) {
+          console.error('[Background] deadlink:check failed:', err);
+          sendResponse({
+            requestId: payload.requestId,
+            results: [],
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
       })();
 
       // 返回 true 表示异步响应
@@ -138,6 +97,12 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
     }
 
     const notifId = `classify-${id}-${Date.now()}`;
+    
+    if (classificationResults.size >= 50) {
+      const oldestKey = classificationResults.keys().next().value;
+      if (oldestKey) classificationResults.delete(oldestKey);
+    }
+    
     classificationResults.set(notifId, {
       bookmarkId: id,
       folderId: targetFolderId,

@@ -4,6 +4,7 @@ import { AIProviderFactory } from '../../core/providers';
 import { Button } from '../ui/button';
 import { useT } from '../../i18n';
 import { Settings2, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { validateGeminiKey, validateOllamaUrl, sanitizeSettingValue } from '../../lib/validators';
 
 export function AIProviderSettings() {
   const settings = useSettingsStore();
@@ -12,6 +13,7 @@ export function AIProviderSettings() {
   
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState('');
+  const [valErrors, setValErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     setTestStatus('idle');
@@ -71,10 +73,19 @@ export function AIProviderSettings() {
               <input 
                 type="password" 
                 value={settings.geminiApiKey} 
-                onChange={(e) => actions.setGeminiApiKey(e.target.value)}
+                onChange={(e) => {
+                  const val = sanitizeSettingValue(e.target.value);
+                  actions.setGeminiApiKey(val);
+                  if (val && !validateGeminiKey(val)) {
+                    setValErrors(p => ({...p, geminiKey: 'API Key 格式不正确 / Invalid format'}));
+                  } else {
+                    setValErrors(p => ({...p, geminiKey: ''}));
+                  }
+                }}
                 placeholder="YOUR_API_KEY"
-                className="w-full sm:max-w-md flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className={`w-full sm:max-w-md flex h-9 rounded-md border ${valErrors.geminiKey ? 'border-destructive' : 'border-input'} bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
               />
+              {valErrors.geminiKey && <p className="text-xs text-destructive mt-1">{valErrors.geminiKey}</p>}
               <p className="text-xs text-muted-foreground mt-2">
                 {t('settings.gemini.keyTip')} <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="underline hover:text-primary">{t('settings.gemini.keyLink')}</a>
               </p>
@@ -102,10 +113,19 @@ export function AIProviderSettings() {
               <input 
                 type="text" 
                 value={settings.ollamaUrl} 
-                onChange={(e) => actions.setOllamaUrl(e.target.value)}
+                onChange={(e) => {
+                  const val = sanitizeSettingValue(e.target.value);
+                  actions.setOllamaUrl(val);
+                  if (val && !validateOllamaUrl(val)) {
+                    setValErrors(p => ({...p, ollamaUrl: 'URL 格式不正确 / Invalid URL'}));
+                  } else {
+                    setValErrors(p => ({...p, ollamaUrl: ''}));
+                  }
+                }}
                 placeholder="http://localhost:11434"
-                className="w-full sm:max-w-md flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className={`w-full sm:max-w-md flex h-9 rounded-md border ${valErrors.ollamaUrl ? 'border-destructive' : 'border-input'} bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
               />
+              {valErrors.ollamaUrl && <p className="text-xs text-destructive mt-1">{valErrors.ollamaUrl}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">{t('settings.ollama.model')}</label>

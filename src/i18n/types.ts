@@ -43,6 +43,9 @@ export type TranslationKeys = {
   'sidepanel.btnBigScreen': string; // ⚙️ 大屏统计
   'sidepanel.miniStats.total': string; // 书签总量
   'sidepanel.miniStats.folders': string; // 文件夹数
+  'sidepanel.ai.title': string;
+  'sidepanel.ai.desc': string;
+  'sidepanel.ai.btn': string;
 
   // === ScannerPanel ===
   'scanner.batchCleanBtn': string; // 一键清理全部 ({count})
@@ -85,6 +88,9 @@ export type TranslationKeys = {
   // === IssueList ===
   'issueList.summary': string; // 共 {total} 个问题 (显示 {display} 条)
   'issueList.tip': string; // 💡 点击删除按钮可逐个清理问题书签
+  'issueList.loadMore': string;
+  'issueList.deleted': string;
+  'issueList.confirmDelete': string;
   'issueList.deleteBtn': string; // 删除
   'issueList.excludeBtn': string; // 排除
   'issueList.logDesc.bookmark': string; // 删除了书签「{title}」

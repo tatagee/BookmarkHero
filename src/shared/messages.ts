@@ -74,4 +74,5 @@ export interface UrlCheckResult {
 export interface DeadLinkResultPayload {
   requestId: string;
   results: UrlCheckResult[];
+  error?: string;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ConcurrencyQueue, withTimeout } from '@/core/utils/concurrency';
+import { ConcurrencyQueue, withTimeout } from '../concurrency';
 
 describe('ConcurrencyQueue', () => {
   it('应该限制同时执行的任务数量', async () => {
@@ -40,6 +40,45 @@ describe('ConcurrencyQueue', () => {
     await queue.run(async () => { executed = true; });
     expect(executed).toBe(true);
   });
+
+  it('abort() 调用后应该拒绝新的挂起任务并清空队列', async () => {
+    const queue = new ConcurrencyQueue(1);
+    
+    // 这个任务会立即执行并占用并发份额
+    const task1 = queue.run(async () => {
+      await new Promise(r => setTimeout(r, 50));
+      return 'task1-done';
+    });
+    
+    // 这两个任务会被挂起
+    const task2 = queue.run(async () => 'task2-done');
+    const task3 = queue.run(async () => 'task3-done');
+    
+    // 阻止 unhandled rejection
+    task2.catch(() => {});
+    task3.catch(() => {});
+    
+    // 中止队列
+    queue.abort();
+    
+    // task1 已经开始执行，应该能完成 (在原有逻辑中是这样设计的)
+    expect(await task1).toBe('task1-done');
+    
+    // 挂起的任务应该被 reject
+    await expect(task2).rejects.toThrow('aborted');
+    await expect(task3).rejects.toThrow('aborted');
+    
+    // 新加的任务也应该被直接 reject，立即 catch 阻止 unhandled
+    const task4 = queue.run(async () => 'task4');
+    task4.catch(() => {});
+    await expect(task4).rejects.toThrow('aborted');
+    
+    // 检查状态
+    const status = queue.getStatus();
+    expect(status.aborted).toBe(true);
+    expect(status.queued).toBe(0);
+  });
+
 
   it('任务抛出异常不应该阻塞队列', async () => {
     const queue = new ConcurrencyQueue(1);

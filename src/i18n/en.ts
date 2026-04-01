@@ -45,6 +45,9 @@ export const en: TranslationKeys = {
   'sidepanel.btnBigScreen': '⚙️ Full Stats',
   'sidepanel.miniStats.total': 'Bookmarks',
   'sidepanel.miniStats.folders': 'Folders',
+  'sidepanel.ai.title': '✨ AI Organizer',
+  'sidepanel.ai.desc': 'Let AI analyze your messy bookmarks and suggest a clean hierarchical structure.',
+  'sidepanel.ai.btn': 'Open Full View',
 
   // === ScannerPanel ===
   'scanner.batchCleanBtn': 'Clean All ({count})',
@@ -87,6 +90,9 @@ export const en: TranslationKeys = {
   // === IssueList ===
   'issueList.summary': '{total} issues in total (Showing {display})',
   'issueList.tip': '💡 Click delete button to remove issues individually',
+  'issueList.loadMore': 'Load more ({count} left)',
+  'issueList.deleted': '"{title}" deleted',
+  'issueList.confirmDelete': '⚠️ Confirm delete?',
   'issueList.deleteBtn': 'Delete',
   'issueList.excludeBtn': 'Exclude',
   'issueList.logDesc.bookmark': '[Clean] Deleted bookmark "{title}"',

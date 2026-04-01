@@ -4,6 +4,7 @@ import { Button } from '../ui/button';
 import { Clock, Trash2, Undo2, Loader2 } from "lucide-react";
 import { useT } from "../../i18n";
 import { useBookmarkStore } from '../../stores/bookmark.store';
+import { toast } from 'sonner';
 
 export function OperationLogPanel() {
   const logs = useLogStore((state) => state.logs);
@@ -38,7 +39,7 @@ export function OperationLogPanel() {
       await undoLog(logId);
       await refreshBookmarks();
     } catch (err) {
-      alert(t('log.undoFailed', { err: String(err) }));
+      toast.error(t('log.undoFailed', { err: String(err) }));
     } finally {
       setUndoingId(null);
     }

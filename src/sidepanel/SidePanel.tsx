@@ -3,6 +3,8 @@ import { useBookmarkStore } from '../stores/bookmark.store';
 import { useT } from '../i18n';
 import { Button } from '../components/ui/button';
 import { ScannerPanel } from '../components/dashboard/ScannerPanel';
+import { Sparkles, ArrowRight } from 'lucide-react';
+import { Toaster } from 'sonner';
 
 export default function SidePanel() {
   const t = useT();
@@ -58,12 +60,33 @@ export default function SidePanel() {
             </div>
 
             <ScannerPanel />
+
+            {/* AI 功能引流卡片 */}
+            <div className="mt-6 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 rounded-xl p-5 shadow-sm text-left relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Sparkles className="w-16 h-16 text-indigo-500" />
+              </div>
+              <h3 className="font-semibold text-indigo-600 dark:text-indigo-400 flex items-center gap-2 mb-2 relative z-10">
+                {t('sidepanel.ai.title')}
+              </h3>
+              <p className="text-xs text-muted-foreground mb-4 leading-relaxed relative z-10">
+                {t('sidepanel.ai.desc')}
+              </p>
+              <Button 
+                onClick={openOptions} 
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white relative z-10 shadow-md group-hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              >
+                {t('sidepanel.ai.btn')} <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+
             <div className="mt-8 text-center text-xs text-muted-foreground border-t pt-4">
                {t('app.statsFullLink')}
             </div>
           </div>
         )}
       </div>
+      <Toaster position="top-center" richColors />
     </div>
   );
 }

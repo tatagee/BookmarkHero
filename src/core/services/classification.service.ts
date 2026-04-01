@@ -35,6 +35,8 @@ function extractFolderPaths(tree: chrome.bookmarks.BookmarkTreeNode[]): { id: st
 export class ClassificationService {
   // 缓存已提取的文件夹列表，在一次分析会话中复用，避免 N 次重复 IO
   private cachedFolders: { id: string; path: string }[] | null = null;
+  // 缓存服务可用性检测，避免并发执行 N 次 API 请求
+  private availabilityPromise: Promise<boolean> | null = null;
 
   /**
    * 预加载文件夹列表
@@ -43,13 +45,22 @@ export class ClassificationService {
   async preloadFolders(): Promise<void> {
     const tree = await getBookmarkTree();
     this.cachedFolders = extractFolderPaths(tree);
+    
+    // 预热可用性检查
+    const providerId = useSettingsStore.getState().activeAiProvider;
+    const provider = AIProviderFactory.createProvider(providerId);
+    this.availabilityPromise = provider.isAvailable();
   }
 
   async classify(bookmark: { title: string; url: string; currentPath?: string }): Promise<ClassificationResult> {
     const providerId = useSettingsStore.getState().activeAiProvider;
     const provider = AIProviderFactory.createProvider(providerId);
 
-    const isAvailable = await provider.isAvailable();
+    if (!this.availabilityPromise) {
+      this.availabilityPromise = provider.isAvailable();
+    }
+
+    const isAvailable = await this.availabilityPromise;
     if (!isAvailable) {
       const t = getT();
       throw new Error(t('ai.provider.unavailable', { name: provider.name }));

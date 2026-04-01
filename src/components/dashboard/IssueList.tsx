@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { useT } from "../../i18n";
+import { toast } from 'sonner';
 
 // 重复书签 issue 的 data 结构
 interface DuplicateIssueData {
@@ -91,7 +92,7 @@ export function IssueList({ result, scannerId }: IssueListProps) {
           onClick={() => setDisplayCount((c) => c + 30)}
           className="w-full text-xs h-8 mt-2"
         >
-          加载更多 (还有 {issues.length - displayCount} 条)
+          {t('issueList.loadMore', { count: issues.length - displayCount })}
         </Button>
       )}
     </div>
@@ -148,7 +149,7 @@ function IssueRow({
     } catch (err) {
       console.error("[IssueList] 触发删除失败（受保护）:", err);
       // 弹出警示避免默认静默吞无反应的灾难
-      alert(`无法删除该项: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`无法删除该项: ${err instanceof Error ? err.message : String(err)}`);
       setIsDeleting(false);
     }
   };
@@ -158,7 +159,7 @@ function IssueRow({
     return (
       <div className="flex items-center gap-2 p-3 rounded-md border border-emerald-500/20 bg-emerald-500/5 text-xs text-emerald-600 animate-in fade-in duration-200">
         <Check className="h-4 w-4" />
-        <span className="font-medium">「{String(issue.bookmarkTitle)}」已删除</span>
+        <span className="font-medium">{t('issueList.deleted', { title: String(issue.bookmarkTitle) })}</span>
       </div>
     );
   }
@@ -251,7 +252,7 @@ function IssueRow({
         <div className="absolute inset-0 z-10 flex items-center justify-end bg-gradient-to-l from-background via-background/95 to-transparent pr-3 animate-in fade-in duration-200">
           <div className="flex items-center gap-3 bg-background/50 backdrop-blur-sm p-1.5 rounded-md border shadow-sm">
             <span className="text-xs text-destructive font-medium whitespace-nowrap px-1">
-              ⚠️ 确认删除？
+              {t('issueList.confirmDelete')}
             </span>
             <Button
               variant="outline"

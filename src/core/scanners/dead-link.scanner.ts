@@ -21,9 +21,10 @@ export async function checkUrlsViaBackground(
 
   return new Promise((resolve, reject) => {
     // 设置整体超时，防止 background 无响应时永久挂起
+    // 注意：Background 是并发处理(Promise.all)这批 URL，因此总耗时不会是 timeout * n，而是接近单次 timeout
     const globalTimer = setTimeout(() => {
       reject(new Error('[DeadLinkScanner] Background response timed out.'));
-    }, timeoutMs * urls.length + 5000); // 留 5s 的总响应余量
+    }, timeoutMs + 10000); // 留 10s 的 IPC 通信和调度响应余量
 
     chrome.runtime.sendMessage({ type: 'deadlink:check', payload }, (response) => {
       clearTimeout(globalTimer);

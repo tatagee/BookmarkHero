@@ -126,6 +126,14 @@ export async function removeBookmarkTree(id: string): Promise<void> {
  */
 export async function ensureFolderExists(path: string): Promise<string> {
   const parts = path.split('/').filter(Boolean);
+
+  if (parts.length > 10) {
+    throw new Error(`[ensureFolderExists] Folder path too deep (${parts.length} levels). Maximum allowed is 10.`);
+  }
+  if (parts.some(p => p.length > 100)) {
+    throw new Error('[ensureFolderExists] Folder name too long. Maximum allowed is 100 characters per folder.');
+  }
+
   if (parts.length === 0) return '1'; // 如果传空，默认返回常理上的书签栏 ID
 
   const tree = await getBookmarkTree();

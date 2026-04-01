@@ -45,6 +45,9 @@ export const zh: TranslationKeys = {
   'sidepanel.btnBigScreen': '⚙️ 大屏统计',
   'sidepanel.miniStats.total': '书签总量',
   'sidepanel.miniStats.folders': '文件夹数',
+  'sidepanel.ai.title': '✨ AI 智能分类',
+  'sidepanel.ai.desc': '利用 AI 分析杂乱的书签树，自动创建最佳文件夹层级，让收藏井井有条。',
+  'sidepanel.ai.btn': '去大屏整理',
 
   // === ScannerPanel ===
   'scanner.batchCleanBtn': '一键清理全部 ({count})',
@@ -87,6 +90,9 @@ export const zh: TranslationKeys = {
   // === IssueList ===
   'issueList.summary': '共 {total} 个问题 (显示 {display} 条)',
   'issueList.tip': '💡 点击删除按钮可逐个清理问题书签',
+  'issueList.loadMore': '加载更多 (还有 {count} 条)',
+  'issueList.deleted': '「{title}」已删除',
+  'issueList.confirmDelete': '⚠️ 确认删除？',
   'issueList.deleteBtn': '删除',
   'issueList.excludeBtn': '排除',
   'issueList.logDesc.bookmark': '[清理] 删除了书签「{title}」',

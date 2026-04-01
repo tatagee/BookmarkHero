@@ -9,7 +9,12 @@ export class OllamaProvider implements IAIProvider {
     const { ollamaUrl, ollamaModel } = useSettingsStore.getState();
     try {
       const targetModel = ollamaModel || 'llama3';
-      const resp = await fetch(`${ollamaUrl}/api/tags`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const resp = await fetch(`${ollamaUrl}/api/tags`, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      
       if (!resp.ok) return false;
 
       const data = await resp.json();
@@ -80,6 +85,9 @@ ${currentLocation}
 }`;
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120_000);
+
       const resp = await fetch(`${ollamaUrl}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -90,7 +98,9 @@ ${currentLocation}
           format: 'json',
           options: { temperature: 0.2 },
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
 
       if (!resp.ok) {
         throw new Error(`Ollama request failed: ${resp.status}`);

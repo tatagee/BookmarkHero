@@ -34,9 +34,23 @@ export class ConcurrencyQueue {
   private activeCount = 0;
   private queue: (() => void)[] = [];
   private limit: number;
+  private aborted = false;
 
   constructor(concurrencyLimit: number) {
     this.limit = Math.max(1, concurrencyLimit);
+  }
+
+  abort(): void {
+    this.aborted = true;
+    // 清空等待队列，并唤醒所有等待者（唤醒后由于 aborted=true 会直接抛错退出）
+    while (this.queue.length > 0) {
+      const next = this.queue.shift();
+      next?.();
+    }
+  }
+
+  getStatus(): { active: number; queued: number; aborted: boolean } {
+    return { active: this.activeCount, queued: this.queue.length, aborted: this.aborted };
   }
 
   /**
@@ -44,11 +58,19 @@ export class ConcurrencyQueue {
    * @param task 返回 Promise 的异步任务执行函数
    */
   async run<T>(task: () => Promise<T>): Promise<T> {
+    if (this.aborted) {
+      throw new Error('ConcurrencyQueue has been aborted');
+    }
+
     if (this.activeCount >= this.limit) {
       // 队列已满，挂起等待
       await new Promise<void>(resolve => {
         this.queue.push(resolve);
       });
+    }
+
+    if (this.aborted) {
+      throw new Error('ConcurrencyQueue has been aborted');
     }
 
     this.activeCount++;
@@ -57,7 +79,7 @@ export class ConcurrencyQueue {
     } finally {
       this.activeCount--;
       // 任务完成，如果有排队的，唤醒队列中的下一个
-      if (this.queue.length > 0) {
+      if (this.queue.length > 0 && !this.aborted) {
         const next = this.queue.shift();
         next?.();
       }
