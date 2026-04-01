@@ -188,16 +188,19 @@ export function AIProviderSettings() {
           {t('settings.prefsTitle')}
         </h4>
 
-        <div className="flex flex-col gap-6">
+        <div className="space-y-4">
           {/* 分类语言 */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium leading-none">
-              {t('settings.general.catLang')}
-            </label>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card">
+            <div className="flex-1 pr-4">
+              <label className="text-sm font-semibold">{t('settings.general.catLang')}</label>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                {t('settings.general.catLangTip')}
+              </p>
+            </div>
+            <div className="flex gap-1 p-1 bg-muted rounded-lg shrink-0">
               <button
                 onClick={() => actions.setCategoryLanguage('zh')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                   settings.categoryLanguage === 'zh'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -207,7 +210,7 @@ export function AIProviderSettings() {
               </button>
               <button
                 onClick={() => actions.setCategoryLanguage('en')}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                   settings.categoryLanguage === 'en'
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -216,20 +219,20 @@ export function AIProviderSettings() {
                 {t('settings.general.catLangEn')}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {t('settings.general.catLangTip')}
-            </p>
           </div>
 
           {/* 最大分类层数 */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium leading-none">
-              {t('settings.general.maxDepth')}
-            </label>
-            <div className="flex gap-1 p-1 bg-muted rounded-lg w-fit flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card">
+            <div className="flex-1 pr-4">
+              <label className="text-sm font-semibold">{t('settings.general.maxDepth')}</label>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                {t('settings.general.maxDepthTip')}
+              </p>
+            </div>
+            <div className="flex gap-1 p-1 bg-muted rounded-lg shrink-0">
               <button
                 onClick={() => actions.setMaxCategoryDepth(1)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                   settings.maxCategoryDepth === 1
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -239,7 +242,7 @@ export function AIProviderSettings() {
               </button>
               <button
                 onClick={() => actions.setMaxCategoryDepth(2)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
                   settings.maxCategoryDepth === 2
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
@@ -248,35 +251,33 @@ export function AIProviderSettings() {
                 {t('settings.general.maxDepth2')}
               </button>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {t('settings.general.maxDepthTip')}
-            </p>
           </div>
           
           {/* 最大并发 */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium leading-none">
-              {t('settings.general.concurrency', { count: settings.maxConcurrency })}
-            </label>
-            <div className="flex items-center gap-4 max-w-sm px-1 py-1">
-              <input
-                type="range"
-                min="1"
-                max="30"
-                step="1"
-                value={settings.maxConcurrency}
-                onChange={(e) => actions.setMaxConcurrency(parseInt(e.target.value, 10))}
-                className="flex-1 w-full h-2 bg-muted rounded-lg appearance-none cursor-pointer"
-              />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-lg border bg-card">
+            <div className="flex-1 pr-4">
+              <label className="text-sm font-semibold">
+                {t('settings.general.concurrency', { count: settings.maxConcurrency })}
+              </label>
+              <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                {t('settings.general.concurTip')}
+              </p>
             </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground/60 px-1">
-              <span>1</span>
-              <span>15</span>
-              <span>30</span>
+            <div className="w-full sm:w-64 shrink-0 flex flex-col gap-2 pt-2 sm:pt-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">1</span>
+                <input
+                  type="range"
+                  min="1"
+                  max="30"
+                  step="1"
+                  value={settings.maxConcurrency}
+                  onChange={(e) => actions.setMaxConcurrency(parseInt(e.target.value, 10))}
+                  className="flex-1 h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-xs text-muted-foreground">30</span>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-1">
-              {t('settings.general.concurTip')}
-            </p>
           </div>
         </div>
       </div>
