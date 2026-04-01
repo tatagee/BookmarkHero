@@ -2,25 +2,25 @@
 
 > 你的数字记忆助手。让保存的每一条信息，在需要时都能以最短路径找到。
 
-BookmarkHero 是一个智能 Chrome 书签管理扩展。不仅帮助你检测死链、清理空文件夹、合并重复项，更能提供基于当前网页的智能书签推荐，以及利用 AI 对积压书签进行自动分类。
+BookmarkHero 是一个智能 Chrome 书签管理扩展。帮助你检测死链、清理空文件夹、合并重复项，并通过 AI 对积压书签进行自动分类整理。
 
 ## ✨ 核心特性
 
 - **🩺 书签健康体检**: 极速扫描死链（4xx/5xx）、清理无用空文件夹。
-- **🔄 智能去重合并**: 识别内容相同或 URL 参数差异的重复书签，建议合并方案。
-- **📊 动态仪表盘**: 直观展示你的书签构成（域名分布、书签年龄等）。
+- **🔄 智能去重合并**: 识别内容相同或 URL 参数差异的重复书签。
+- **🤖 AI 智能分类**: 支持 Gemini Cloud 和本地 Ollama 模型，对书签进行自动分类整理，一键批量接受建议或逐条确认。
+- **📊 动态仪表盘**: 直观展示书签健康状况，支持操作日志与一键撤销。
 - **⚡ 双界面设计**:
-  - **Side Panel**: 轻量侧边栏，适合日常碎片化整理和"当前网页相关推荐"。
+  - **Side Panel**: 轻量侧边栏，适合日常碎片化扫描和 AI 整理入口。
   - **Options**: 全屏选项页，适合全局数据分析和批量深度整理。
-
-*(注：基于 AI 的自动分类和语义检索功能正在规划中，将在 Phase 2 推出。)*
 
 ## 🛠 技术栈
 
 - **框架**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
-- **构建**: [Vite 8](https://vitejs.dev/) + [CRXJS Vite Plugin](https://crxjs.dev/vite-plugin)
-- **样式**: [Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)
+- **构建**: [Vite](https://vitejs.dev/) + [CRXJS Vite Plugin](https://crxjs.dev/vite-plugin)
+- **样式**: [Tailwind CSS](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/)
 - **状态管理**: [Zustand](https://zustand-demo.pmnd.rs/)
+- **AI 支持**: Google Gemini API / Ollama (本地)
 
 ## 🚀 快速开始
 
@@ -47,20 +47,29 @@ npm run dev
 
 ### 3. 生产构建
 
-发布前进行生产环境打包：
-
 ```bash
 npm run build
 ```
+
 执行后，`dist` 文件夹即刻打包为可供发布或分发的 Chrome 扩展产物。
+
+### 4. 运行测试
+
+```bash
+npm run test
+```
 
 ## 📝 开发进度
 
-本项目正在通过 Phase 1-4 阶段逐步交付：
 - [x] **Phase 1 (基础健康)**: 死链检测、空文件夹清理、重复去重。
-- [ ] **Phase 2 (AI 分类)**: 新书签自动分类，存量批量整理。
+- [x] **Phase 2 (AI 分类)**: 新书签自动分类（通知确认）+ 存量批量整理（快速/深度扫描模式）。
 - [ ] **Phase 3 (智能检索)**: 结合向量数据库的语义化搜索和网页内推荐。
 - [ ] **Phase 4 (知识网络)**: 数据看板强化和阅读习惯统计。
+
+## 📄 文档
+
+- [Privacy Policy](https://tatagee.github.io/BookmarkHero/privacy-policy.html)
+- [Terms of Service](./terms-of-service.md)
 
 ---
 
