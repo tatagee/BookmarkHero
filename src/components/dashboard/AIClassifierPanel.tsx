@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useBookmarkStore } from '../../stores/bookmark.store';
 import { ClassificationService } from '../../core/services/classification.service';
 import { DuplicateFolderMerger } from '../../core/services/duplicate-folder-merger';
+import { EmptyFolderScanner } from '../../core/scanners/empty-folder.scanner';
 import type { ClassificationResult } from '../../core/providers/types';
 import { Button } from '../ui/button';
 import { Loader2, ArrowRight, Check, FolderSearch, Zap, Search, Sparkles } from 'lucide-react';
@@ -364,6 +365,26 @@ export function AIClassifierPanel() {
         console.error(`[acceptAll] 移动书签失败: ${item.title}`, err);
         toast.error(t('ai.moveFailed', { err: String(err) }));
       }
+    }
+
+    // ── 阶段4：自动执行一次空文件夹扫描并清理残骸 ──
+    try {
+      const freshTree = await chrome.bookmarks.getTree();
+      const emptyScanner = new EmptyFolderScanner();
+      const result = await emptyScanner.scan(freshTree);
+      
+      let removedCount = 0;
+      for (const issue of result.issues) {
+         try {
+            await chrome.bookmarks.removeTree(issue.bookmarkId);
+            removedCount++;
+         } catch(e) {}
+      }
+      if (removedCount > 0) {
+         toast.success(t('scanner.msg.emptyFolder.done') + ` (自动清理了 ${removedCount} 个残留)`);
+      }
+    } catch(err) {
+      console.warn('[acceptAll] 自动清理空文件夹失败:', err);
     }
 
     console.log(`[acceptAll] 完成：成功移动 ${movedCount}/${moveItems.length} 个书签`);
