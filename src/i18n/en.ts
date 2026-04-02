@@ -101,8 +101,8 @@ export const en: TranslationKeys = {
   'ai.subtitle': 'One-click scan and analyze to find bookmarks that need re-categorization.',
   'ai.mode.quick': 'Quick',
   'ai.mode.quickTip': 'Organize uncategorized loose bookmarks (Fast)',
-  'ai.mode.deep': 'Review',
-  'ai.mode.deepTip': 'Review and correct categorized bookmarks (Only moving misplacements)',
+  'ai.mode.deep': 'Deep',
+  'ai.mode.deepTip': 'Deeply scan and correct categorized bookmarks (Recommended for fixing misplaced entries)',
   'ai.includeBookmarksBar': 'Include Bookmarks Bar',
   'ai.includeBookmarksBarTip': 'The Bookmarks Bar is highly used, excluded by default.',
   'ai.btnStart': 'Start AI Organize',
@@ -127,7 +127,7 @@ export const en: TranslationKeys = {
   'ai.moveFailed': 'Move failed: {err}',
   'ai.guide.title': 'Select mode and click "Start Organize"',
   'ai.guide.quick': 'Quick Mode: Organize loose root bookmarks (Fast & Recommended).',
-  'ai.guide.deep': 'Review Mode: Re-check bookmarks already in folders to fix previous organization messes.',
+  'ai.guide.deep': 'Deep Mode: Re-check bookmarks already in folders to fix previous organization messes.',
 
   // === OperationLogPanel ===
   'log.title': 'Operation History',
