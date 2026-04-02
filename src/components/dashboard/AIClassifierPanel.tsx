@@ -81,6 +81,7 @@ export function AIClassifierPanel() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [hasRun, setHasRun] = useState(false);
   const [includeBookmarksBar, setIncludeBookmarksBar] = useState(false);
+  const [deepConfirmData, setDeepConfirmData] = useState<{count: number, tokens: string} | null>(null);
 
   const queueRef = useRef<ConcurrencyQueue | null>(null);
 
@@ -97,9 +98,9 @@ export function AIClassifierPanel() {
   const t = useT();
 
   // === 核心：一键扫描 + AI 分析 ===
-  const handleStart = async () => {
+  const handleStart = async (skipConfirmCheck = false) => {
     // ── Pre-flight 同步校验（解决插件中 async 后 window.confirm 报错假死的问题） ──
-    if (scanMode === 'deep') {
+    if (scanMode === 'deep' && !skipConfirmCheck) {
       const freshTree = useBookmarkStore.getState().tree;
       const allRootNodes = freshTree[0]?.children || [];
       const rootNodes = allRootNodes.filter((node) => {
@@ -126,10 +127,9 @@ export function AIClassifierPanel() {
           tokenStr = (estimatedTokens / 1000000).toFixed(2) + 'M';
         }
         
-        const confirmed = window.confirm(t('ai.deep.warning', { count: preCollected, tokens: tokenStr }));
-        if (!confirmed) {
-          return; // 用户取消，直接中断
-        }
+        // 唤起自定义 React 确认弹窗
+        setDeepConfirmData({ count: preCollected, tokens: tokenStr });
+        return; 
       }
     }
 
@@ -463,7 +463,7 @@ export function AIClassifierPanel() {
               {t('common.cancel')} ({progress.done}/{progress.total})
             </Button>
           ) : (
-            <Button onClick={handleStart}>
+            <Button onClick={() => handleStart(false)}>
               {t('ai.btnStart')}
             </Button>
           )}
@@ -592,6 +592,30 @@ export function AIClassifierPanel() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {deepConfirmData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm w-full font-sans border border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-bold mb-3 text-slate-800 dark:text-slate-100">
+              {t('ai.deep.warning').split(' ')[0] /* Fallback Title */} 深度整理
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+              {t('ai.deep.warning', { count: deepConfirmData.count, tokens: deepConfirmData.tokens })}
+            </p>
+            <div className="flex justify-end gap-3 rounded-b">
+              <Button variant="outline" onClick={() => setDeepConfirmData(null)}>
+                {t('ai.deep.cancelBtn')}
+              </Button>
+              <Button variant="default" onClick={() => {
+                setDeepConfirmData(null);
+                handleStart(true);
+              }}>
+                {t('ai.deep.confirmBtn')}
+              </Button>
+            </div>
           </div>
         </div>
       )}
