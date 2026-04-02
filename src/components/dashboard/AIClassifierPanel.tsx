@@ -98,6 +98,41 @@ export function AIClassifierPanel() {
 
   // === 核心：一键扫描 + AI 分析 ===
   const handleStart = async () => {
+    // ── Pre-flight 同步校验（解决插件中 async 后 window.confirm 报错假死的问题） ──
+    if (scanMode === 'deep') {
+      const freshTree = useBookmarkStore.getState().tree;
+      const allRootNodes = freshTree[0]?.children || [];
+      const rootNodes = allRootNodes.filter((node) => {
+        if (!includeBookmarksBar) {
+          if (node.id === '1' || /^(Bookmarks bar|书签栏|Bookmarks Bar)$/i.test(node.title)) {
+            return false;
+          }
+        }
+        return true;
+      });
+      let preCollected = 0;
+      for (const root of rootNodes) {
+        preCollected += collectAllBookmarks(root.children || [], root.title).length;
+      }
+      
+      if (preCollected > 0) {
+        const estimatedTokens = preCollected * 575;
+        let tokenStr = '';
+        if (estimatedTokens < 1000) {
+          tokenStr = estimatedTokens.toString();
+        } else if (estimatedTokens < 1000000) {
+          tokenStr = (estimatedTokens / 1000).toFixed(1) + 'K';
+        } else {
+          tokenStr = (estimatedTokens / 1000000).toFixed(2) + 'M';
+        }
+        
+        const confirmed = window.confirm(t('ai.deep.warning', { count: preCollected, tokens: tokenStr }));
+        if (!confirmed) {
+          return; // 用户取消，直接中断
+        }
+      }
+    }
+
     setIsRunning(true);
     setHasRun(true);
     setItems([]);
@@ -153,25 +188,7 @@ export function AIClassifierPanel() {
         return;
       }
 
-      // ── Step 1.5: 深度模式弹出预估 Token 提醒 ──
-      if (scanMode === 'deep') {
-        // 基于历史测试数据预估: 609个书签耗费 350K tokens，平均约 575 token/书签
-        const estimatedTokens = collected.length * 575;
-        let tokenStr = '';
-        if (estimatedTokens < 1000) {
-          tokenStr = estimatedTokens.toString();
-        } else if (estimatedTokens < 1000000) {
-          tokenStr = (estimatedTokens / 1000).toFixed(1) + 'K';
-        } else {
-          tokenStr = (estimatedTokens / 1000000).toFixed(2) + 'M';
-        }
-
-        const confirmed = window.confirm(t('ai.deep.warning', { count: collected.length, tokens: tokenStr }));
-        if (!confirmed) {
-          setIsRunning(false);
-          return;
-        }
-      }
+      // (预估 Token 警告已在 handleStart 顶部处理完毕)
 
       // ── Step 2: AI 逐条分析 ──
       setProgress({ done: 0, total: collected.length });
