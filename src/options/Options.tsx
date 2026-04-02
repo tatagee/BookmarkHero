@@ -57,7 +57,7 @@ export default function Options() {
             <img 
               src="/concept-logo.png" 
               alt="BookmarkHero" 
-              className="w-12 h-12 rounded-lg shadow-sm object-cover"
+              className="w-14 h-14 rounded-lg shadow-sm object-contain"
             />
             <div>
               <div className="flex items-center gap-3">
