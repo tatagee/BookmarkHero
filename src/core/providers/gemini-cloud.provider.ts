@@ -2,6 +2,21 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { ClassificationResult, IAIProvider, ClassifyOptions } from './types';
 import { useSettingsStore } from '../../stores/settings.store';
 
+async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  let attempt = 0;
+  while (attempt <= retries) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      if (attempt === retries) throw err;
+      console.warn(`[GeminiCloudProvider] Request failed, retrying (${attempt + 1}/${retries})...`, err.message || err);
+      await new Promise(res => setTimeout(res, 1000 * (attempt + 1))); // Exponential backoff
+      attempt++;
+    }
+  }
+  throw new Error('Unreachable');
+}
+
 export class GeminiCloudProvider implements IAIProvider {
   id = 'gemini-cloud';
   name = 'Gemini API (Cloud)';
@@ -46,12 +61,12 @@ export class GeminiCloudProvider implements IAIProvider {
     const prompt = this.buildPrompt(bookmark, existingFolders, options);
 
     try {
-      const result = await model.generateContent({
+      const result = await withRetry(() => model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: 'application/json',
         },
-      });
+      }));
 
       const responseText = result.response.text();
       const parsed = JSON.parse(responseText);
@@ -112,12 +127,12 @@ List of folder names:
 ${JSON.stringify(folderNames, null, 2)}`;
 
     try {
-      const result = await model.generateContent({
+      const result = await withRetry(() => model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: 'application/json',
         },
-      });
+      }));
 
       const responseText = result.response.text();
       const parsed = JSON.parse(responseText);
@@ -156,12 +171,12 @@ Sample bookmarks to analyze:
 ${JSON.stringify(bookmarksSubSample.map(b => ({ t: b.title, u: b.url })), null, 2)}`;
 
     try {
-      const result = await model.generateContent({
+      const result = await withRetry(() => model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: {
           responseMimeType: 'application/json',
         },
-      });
+      }));
 
       const responseText = result.response.text();
       const parsed = JSON.parse(responseText);
