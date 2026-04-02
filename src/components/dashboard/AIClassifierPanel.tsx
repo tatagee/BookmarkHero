@@ -242,7 +242,11 @@ export function AIClassifierPanel() {
 
     try {
       let targetId = item.result.suggestedFolderId;
-      if (targetId === 'fallback_id_or_create_new' || targetId === 'fallback') {
+      if (
+        targetId === 'fallback_id_or_create_new' || 
+        targetId === 'fallback' || 
+        String(targetId).startsWith('virtual-')
+      ) {
         targetId = await ensureFolderExists(item.result.suggestedFolderPath);
       }
       
@@ -279,7 +283,11 @@ export function AIClassifierPanel() {
     const pathsNeedResolve = new Set<string>();
     for (const item of moveItems) {
       const fid = item.result!.suggestedFolderId;
-      if (fid === 'fallback_id_or_create_new' || fid === 'fallback') {
+      if (
+        fid === 'fallback_id_or_create_new' || 
+        fid === 'fallback' || 
+        String(fid).startsWith('virtual-')
+      ) {
         pathsNeedResolve.add(item.result!.suggestedFolderPath);
       }
     }
@@ -302,7 +310,11 @@ export function AIClassifierPanel() {
     for (const item of moveItems) {
       try {
         let targetId = item.result!.suggestedFolderId;
-        if (targetId === 'fallback_id_or_create_new' || targetId === 'fallback') {
+        if (
+          targetId === 'fallback_id_or_create_new' || 
+          targetId === 'fallback' || 
+          String(targetId).startsWith('virtual-')
+        ) {
           const resolved = resolvedFolderMap.get(item.result!.suggestedFolderPath);
           if (!resolved) {
             // 该路径的文件夹创建已在阶段2失败，跳过此书签
