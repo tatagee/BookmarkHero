@@ -55,7 +55,7 @@ export default function Options() {
         <div className="flex items-center justify-between mb-6 pb-4 border-b">
           <div className="flex items-center gap-4">
             <img 
-              src="/concept-logo.jpeg" 
+              src="/concept-logo.png" 
               alt="BookmarkHero" 
               className="w-12 h-12 rounded-lg shadow-sm object-cover"
             />
