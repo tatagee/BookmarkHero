@@ -71,11 +71,25 @@ chrome.runtime.onMessage.addListener(
   }
 );
 
+// --- 阻止在导入书签时触发自动分类 ---
+let isImporting = false;
+
+chrome.bookmarks.onImportBegan.addListener(() => {
+  isImporting = true;
+  console.log('[BookmarkHero] Import began, pausing auto-classifier.');
+});
+
+chrome.bookmarks.onImportEnded.addListener(() => {
+  isImporting = false;
+  console.log('[BookmarkHero] Import ended, resuming auto-classifier.');
+});
+
 // --- AI 自动分类新书签 ---
 
-const classificationResults = new Map<string, { bookmarkId: string; folderId: string; folderPath: string }>();
+const classificationResults = new Map<string, { bookmarkId: string; suggestedFolderPath: string }>();
 
 chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
+  if (isImporting) return; // 批量导入时不参与处理
   if (!bookmark.url) return; // 忽略文件夹的创建
 
   try {
@@ -87,16 +101,6 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
       return; 
     }
 
-    // 如果找不到精确匹配的 folderId，尝试自动创建
-    let targetFolderId = res.suggestedFolderId;
-    if (targetFolderId === 'fallback_id_or_create_new' || targetFolderId === 'fallback') {
-      try {
-        targetFolderId = await ensureFolderExists(res.suggestedFolderPath);
-      } catch {
-        return; // 创建失败就静默退出
-      }
-    }
-
     const notifId = `classify-${id}-${Date.now()}`;
     
     if (classificationResults.size >= 50) {
@@ -106,8 +110,7 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
     
     classificationResults.set(notifId, {
       bookmarkId: id,
-      folderId: targetFolderId,
-      folderPath: res.suggestedFolderPath
+      suggestedFolderPath: res.suggestedFolderPath
     });
 
     const t = getT();
@@ -129,11 +132,12 @@ chrome.notifications.onButtonClicked.addListener(async (notifId, buttonIndex) =>
   if (!result) return;
 
   if (buttonIndex === 0) {
-    // 点击了 ✅ 接受
+    // 点击了 ✅ 接受 -> 此时再去检索或创建真实的文件夹 ID
     try {
-      await moveBookmark(result.bookmarkId, { parentId: result.folderId });
+      const targetFolderId = await ensureFolderExists(result.suggestedFolderPath);
+      await moveBookmark(result.bookmarkId, { parentId: targetFolderId });
     } catch (err) {
-      console.error('[AutoClassify] Move failed:', err);
+      console.error('[AutoClassify] Move or create folder failed:', err);
     }
   }
   
