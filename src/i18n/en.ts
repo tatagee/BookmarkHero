@@ -137,6 +137,8 @@ export const en: TranslationKeys = {
 
   // === Deep Mode Warning ===
   'ai.deep.warning': 'Deep Mode will analyze {count} bookmarks one by one, estimated to consume ~{tokens} tokens. Confirm and continue?',
+  'ai.deep.blueprinting': 'Designing optimal taxonomy blueprint, please wait...',
+  'ai.deep.blueprintingDone': 'Blueprint generated! Assigning bookmarks...',
   'ai.deep.confirmBtn': 'Continue',
   'ai.deep.cancelBtn': 'Cancel',
 
@@ -169,6 +171,8 @@ export const en: TranslationKeys = {
   'settings.general.maxDepth1': '1 Level (Flat)',
   'settings.general.maxDepth2': '2 Levels (Nested)',
   'settings.general.maxDepthTip': '1 level: Flat categories. 2 levels: Includes sub-categories.',
+  'settings.general.maxCount': '📂 Max Folder Count ({count})',
+  'settings.general.maxCountTip': 'In Deep Mode, restricts the AI to reorganize bookmarks into no more than this many folders to keep it concise.',
   'settings.prefsTitle': 'Classification Preferences',
   'settings.test.btn': 'Test Connection',
   'settings.test.testing': 'Testing...',

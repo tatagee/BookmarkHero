@@ -135,6 +135,8 @@ export type TranslationKeys = {
 
   // === Deep Mode Warning ===
   'ai.deep.warning': string; // 当前书签库共 {count} 个书签，深度整理将逐条分析，可能消耗大量 Token，是否继续？
+  'ai.deep.blueprinting': string; 
+  'ai.deep.blueprintingDone': string;
   'ai.deep.confirmBtn': string; // 继续整理
   'ai.deep.cancelBtn': string; // 取消
 
@@ -167,6 +169,8 @@ export type TranslationKeys = {
   'settings.general.maxDepth1': string;
   'settings.general.maxDepth2': string;
   'settings.general.maxDepthTip': string;
+  'settings.general.maxCount': string;
+  'settings.general.maxCountTip': string;
   'settings.prefsTitle': string; // 控制 AI 建议的新文件夹使用的语言，已有文件夹名称不受影响。
   'settings.test.btn': string; // 测试连接
   'settings.test.testing': string; // 测试中...

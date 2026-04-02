@@ -137,6 +137,8 @@ export const zh: TranslationKeys = {
 
   // === Deep Mode Warning ===
   'ai.deep.warning': '本次深度整理将逐条分析 {count} 个书签，预计约消耗 {tokens} Tokens。是否确认并继续？',
+  'ai.deep.blueprinting': '正在总览并生成最佳分类大纲，请稍候...',
+  'ai.deep.blueprintingDone': '大纲规划完成！开始书签归类...',
   'ai.deep.confirmBtn': '继续整理',
   'ai.deep.cancelBtn': '取消',
 
@@ -169,6 +171,8 @@ export const zh: TranslationKeys = {
   'settings.general.maxDepth1': '1 层（扁平）',
   'settings.general.maxDepth2': '2 层（含子目录）',
   'settings.general.maxDepthTip': '1 层：直接置于大类下；2 层：允许嵌套子分类。',
+  'settings.general.maxCount': '📂 最大文件夹数量 ({count})',
+  'settings.general.maxCountTip': '深度整理时，强制将书签重组到不超过此数量的分类中，适用于精简管理。',
   'settings.prefsTitle': '分类偏好',
   'settings.test.btn': '测试连接',
   'settings.test.testing': '测试中...',

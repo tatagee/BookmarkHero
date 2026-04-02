@@ -131,6 +131,50 @@ ${JSON.stringify(folderNames, null, 2)}`;
     }
   }
 
+  async generateTaxonomy(
+    bookmarksSubSample: { title: string; url: string }[],
+    maxCategories: number,
+    language?: string
+  ): Promise<string[]> {
+    const { geminiApiKey, geminiModel } = useSettingsStore.getState();
+    if (!geminiApiKey) {
+      throw new Error('Gemini API Key is not configured.');
+    }
+
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
+
+    const prompt = `You are a professional taxonomy architect. Your task is to design an optimal, high-level folder structure to organize the provided bookmarks.
+CRITICAL CONSTRAINTS:
+1. You MUST generate NO MORE THAN ${maxCategories} distinct folder paths. (Return a maximum of ${maxCategories} elements).
+2. Write folder names in: ${language === 'en' ? 'English' : 'Chinese'}
+3. Return exactly a JSON array of strings, where each string is a full path (e.g. "Work", "Development/Frontend").
+4. Each category must be broad enough to capture related bookmarks but specific enough to be useful.
+5. Only output a valid JSON array, do not output markdown blocks or other text.
+
+Sample bookmarks to analyze:
+${JSON.stringify(bookmarksSubSample.map(b => ({ t: b.title, u: b.url })), null, 2)}`;
+
+    try {
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const responseText = result.response.text();
+      const parsed = JSON.parse(responseText);
+      if (Array.isArray(parsed)) {
+        return parsed.slice(0, maxCategories) as string[];
+      }
+      return [];
+    } catch (error) {
+      console.warn('[GeminiCloudProvider] Taxonomy generation failed:', error);
+      return [];
+    }
+  }
+
   private buildPrompt(
     bookmark: { title: string; url: string; currentPath?: string },
     folders: { id: string; path: string }[],
@@ -173,9 +217,16 @@ ${JSON.stringify(folderNames, null, 2)}`;
       : `根目录规则：禁止在「${bookmarksBarName}」下创建分类文件夹。所有分类文件夹必须统一归口到「${otherBookmarksName}」下。`;
 
     // 复用规则
-    const reuseConstraint = categoryLanguage === 'en'
-      ? 'REUSE RULE (HIGHEST PRIORITY): 1. You MUST prioritize choosing an existing folder from the <folders> list. 2. Only suggest a new folder path if absolutely no existing folder matches the semantics. 3. DO NOT create new synonymous folders (e.g. if "Tools" exists, do not create "Online Tools", reuse "Tools").'
-      : '复用规则（最高优先级）：1. 你必须优先从 <folders> 列表中选择已有文件夹。2. 只有当现有文件夹中确实没有任何语义匹配的选项时，才可建议新路径。3. 强烈禁止创建已有文件夹的近义词（如果已有 "工具"，请复用它，不要新建 "在线工具"）。';
+    let reuseConstraint = '';
+    if (options?.strictFoldersOnly) {
+      reuseConstraint = categoryLanguage === 'en'
+        ? 'STRICT ASSIGNMENT RULE (HIGHEST PRIORITY): You MUST ONLY choose an exact folder path from the <folders> list below. YOU ARE STRICTLY FORBIDDEN from creating any new folders. If no folder is perfect, pick the closest one.'
+        : '严格分类规则（最高优先级）：你必须且只能从下面的 <folders> 列表中挑选一个精确的分类路径。绝对禁止创建任何新文件夹！如果没有完美的分类，请挑选最接近的一个。';
+    } else {
+      reuseConstraint = categoryLanguage === 'en'
+        ? 'REUSE RULE (HIGHEST PRIORITY): 1. You MUST prioritize choosing an existing folder from the <folders> list. 2. Only suggest a new folder path if absolutely no existing folder matches the semantics. 3. DO NOT create new synonymous folders (e.g. if "Tools" exists, do not create "Online Tools", reuse "Tools").'
+        : '复用规则（最高优先级）：1. 你必须优先从 <folders> 列表中选择已有文件夹。2. 只有当现有文件夹中确实没有任何语义匹配的选项时，才可建议新路径。3. 强烈禁止创建已有文件夹的近义词（如果已有 "工具"，请复用它，不要新建 "在线工具"）。';
+    }
 
     // 层数约束指令（用实际的 otherBookmarksName 作为示例路径）
     const depthConstraint = maxCategoryDepth === 1

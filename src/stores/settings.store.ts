@@ -6,10 +6,12 @@ import { chromeStorageAdapter } from '../shared/chrome-storage-adapter';
 export interface SettingsState {
   /** 允许并发的最大数 */
   maxConcurrency: number;
-  /** AI 分类建议的最大文件夹层数（1=单层扁平, 2=允许二级子目录） */
-  maxCategoryDepth: 1 | 2;
   /** 界面的展示语言 (目前只是开关状态) */
   uiLanguage: 'zh' | 'en';
+  /** AI 分类建议的最大文件夹层数（1=单层扁平, 2=允许二级子目录） */
+  maxCategoryDepth: 1 | 2;
+  /** 控制书签文件夹的最大数量，最低10，最高50 */
+  maxCategoryCount: number;
   /** AI 建议分类文件夹的命名语言 */
   categoryLanguage: 'zh' | 'en';
   /** 全局域名豁免名单（扫瞄时遇到这些域名会直接跳过） */
@@ -29,6 +31,7 @@ export interface SettingsState {
     setUiLanguage: (lang: 'zh' | 'en') => void;
     setCategoryLanguage: (lang: 'zh' | 'en') => void;
     setMaxCategoryDepth: (depth: 1 | 2) => void;
+    setMaxCategoryCount: (count: number) => void;
     
     // UI AI
     setActiveAiProvider: (providerId: 'gemini-cloud' | 'ollama') => void;
@@ -49,6 +52,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set) => ({
       maxConcurrency: 10,
       maxCategoryDepth: 2,
+      maxCategoryCount: 30, // 默认最大文件夹数为 30
       uiLanguage: 'zh',
       categoryLanguage: 'zh',
       ignoreDomains: ['localhost', '127.0.0.1'], // 移除 github.com, 它的死链应该被检测
@@ -74,6 +78,7 @@ export const useSettingsStore = create<SettingsState>()(
         setUiLanguage: (lang: 'zh' | 'en') => set({ uiLanguage: lang }),
         setCategoryLanguage: (lang: 'zh' | 'en') => set({ categoryLanguage: lang }),
         setMaxCategoryDepth: (depth: 1 | 2) => set({ maxCategoryDepth: depth }),
+        setMaxCategoryCount: (count) => set({ maxCategoryCount: Math.max(10, Math.min(50, count)) }),
         
         setActiveAiProvider: (p: 'gemini-cloud' | 'ollama') => set({ activeAiProvider: p }),
         setGeminiApiKey: (key: string) => set({ geminiApiKey: key.trim() }),

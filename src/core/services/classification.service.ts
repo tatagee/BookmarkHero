@@ -57,6 +57,43 @@ export class ClassificationService {
     }
   }
 
+  /**
+   * 针对深度整理模式，提取具有代表性的书签，生成顶层分类大纲
+   */
+  async generateTaxonomyBlueprint(
+    bookmarks: { title: string; url: string }[]
+  ): Promise<void> {
+    const state = useSettingsStore.getState();
+    const providerId = state.activeAiProvider;
+    const provider = AIProviderFactory.createProvider(providerId);
+
+    if (!provider.generateTaxonomy) {
+      // 如果 Provider 不支持这个方法，就静默放弃大纲生成
+      return;
+    }
+
+    // 随机或者截取书签子集用于分析大纲 (最多 300 个，防止上下文爆炸)
+    const MAX_SAMPLE = 300;
+    const sample = bookmarks.length > MAX_SAMPLE 
+      ? [...bookmarks].sort(() => 0.5 - Math.random()).slice(0, MAX_SAMPLE)
+      : bookmarks;
+
+    const taxonomyRoots = await provider.generateTaxonomy(
+      sample, 
+      state.maxCategoryCount, 
+      state.categoryLanguage
+    );
+
+    if (taxonomyRoots && taxonomyRoots.length > 0) {
+      // 核心魔改：在大纲一旦生成后，直接以此作为 cachedFolders 的全集，强制接下来的分类仅能在这些项中选择！
+      // 为这些被生成的假路径赋予一个负数的假ID，分类保存后会自动变为有效节点
+      this.cachedFolders = taxonomyRoots.map((path, idx) => ({
+        id: `virtual-${idx}`,
+        path
+      }));
+    }
+  }
+
   async classify(bookmark: { title: string; url: string; currentPath?: string }, options?: ClassifyOptions): Promise<ClassificationResult> {
     const providerId = useSettingsStore.getState().activeAiProvider;
     const provider = AIProviderFactory.createProvider(providerId);

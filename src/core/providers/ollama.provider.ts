@@ -77,11 +77,20 @@ export class OllamaProvider implements IAIProvider {
         ? 'DEPTH RULE: suggestedFolderPath can be at most 2 levels of folders after the root.'
         : '层数规则：suggestedFolderPath 根目录后最多两层文件夹。');
 
+    // 严管约束指令
+    let strictFoldersConstraint = '';
+    if (options?.strictFoldersOnly) {
+      strictFoldersConstraint = categoryLanguage === 'en'
+        ? 'STRICT ASSIGNMENT RULE: You MUST ONLY choose an exact folder path from the "已有文件夹" list below. YOU ARE STRICTLY FORBIDDEN from creating any new folders.'
+        : '严格分类规则：你必须且只能从下面的【已有文件夹】列表中挑选一个精确的分类路径。绝对禁止创建任何新文件夹！';
+    }
+
     const prompt = `你是一个书签分类助手。请根据书签的标题、URL 和当前位置，判断该书签是否放在了合理的位置。
 ${deepModeInstruction}
 ${langInstruction}
 ${categoryConstraint}
 ${depthConstraint}
+${strictFoldersConstraint}
 
 用户已有文件夹：
 ${folderListStr}
@@ -180,6 +189,60 @@ ${JSON.stringify(folderNames, null, 2)}`;
       return [];
     } catch (error) {
       console.warn('[OllamaProvider] Semantic grouping failed:', error);
+      return [];
+    }
+  }
+
+  async generateTaxonomy(
+    bookmarksSubSample: { title: string; url: string }[],
+    maxCategories: number,
+    language?: string
+  ): Promise<string[]> {
+    const { ollamaUrl, ollamaModel } = useSettingsStore.getState();
+
+    const prompt = `You are a professional taxonomy architect. Your task is to design an optimal, high-level folder structure to organize the provided bookmarks.
+CRITICAL CONSTRAINTS:
+1. You MUST generate NO MORE THAN ${maxCategories} distinct folder paths. (Return a maximum of ${maxCategories} elements).
+2. Write folder names in: ${language === 'en' ? 'English' : 'Chinese'}
+3. Return exactly a JSON array of strings, where each string is a full path (e.g. "Work", "Development/Frontend").
+4. Each category must be broad enough to capture related bookmarks but specific enough to be useful.
+5. Only output a valid JSON array, do not output markdown blocks or other text.
+
+Sample bookmarks to analyze:
+${JSON.stringify(bookmarksSubSample.map(b => ({ t: b.title, u: b.url })), null, 2)}`;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+      const resp = await fetch(`${ollamaUrl}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: ollamaModel || 'llama3',
+          prompt,
+          stream: false,
+          format: 'json',
+          options: { temperature: 0.2 },
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) {
+        throw new Error(`Ollama request failed: ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      const parsed = JSON.parse(data.response);
+      if (Array.isArray(parsed)) {
+        return parsed.slice(0, maxCategories) as string[];
+      }
+      return [];
+    } catch (error) {
+      console.warn('[OllamaProvider] Taxonomy generation failed:', error);
       return [];
     }
   }

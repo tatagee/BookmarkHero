@@ -178,6 +178,14 @@ export function AIClassifierPanel() {
 
       const service = new ClassificationService();
       await service.preloadFolders();
+
+      // === 核心：深度模式下，先进行大纲整体规划 ===
+      if (scanMode === 'deep') {
+        toast.info(t('ai.deep.blueprinting'));
+        await service.generateTaxonomyBlueprint(collected.map(item => ({ title: item.title, url: item.url })));
+        toast.success(t('ai.deep.blueprintingDone'));
+      }
+
       const queue = new ConcurrencyQueue(maxConcurrency);
       queueRef.current = queue;
       const results: BookmarkItem[] = [];
@@ -189,7 +197,7 @@ export function AIClassifierPanel() {
             title: item.title,
             url: item.url,
             currentPath: item.currentPath,
-          }, { mode: scanMode });
+          }, { mode: scanMode, strictFoldersOnly: scanMode === 'deep' });
           results.push({ ...item, result: res });
         } catch (err) {
           console.error(`[AI整理] ${item.title} 分析失败:`, err);

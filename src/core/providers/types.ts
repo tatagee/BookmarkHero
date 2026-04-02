@@ -14,6 +14,7 @@ export interface ClassificationResult {
 
 export interface ClassifyOptions {
   mode: 'quick' | 'deep';
+  strictFoldersOnly?: boolean;
 }
 
 export interface IAIProvider {
@@ -34,4 +35,9 @@ export interface IAIProvider {
     folderNames: string[],
     language?: string
   ): Promise<string[][]>;
+  generateTaxonomy?(
+    bookmarksSubSample: { title: string; url: string }[],
+    maxCategories: number,
+    language?: string
+  ): Promise<string[]>;
 }

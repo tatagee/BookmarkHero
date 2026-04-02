@@ -254,6 +254,33 @@ export function AIProviderSettings() {
               </button>
             </div>
           </div>
+
+          {/* 最大分类数量 */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-card">
+            <div className="flex-1 pr-2">
+              <label className="text-[13px] font-semibold">
+                {t('settings.general.maxCount', { count: settings.maxCategoryCount })}
+              </label>
+              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                {t('settings.general.maxCountTip')}
+              </p>
+            </div>
+            <div className="w-full sm:w-40 shrink-0 flex flex-col pt-1 sm:pt-0">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground">10</span>
+                <input
+                  type="range"
+                  min="10"
+                  max="50"
+                  step="1"
+                  value={settings.maxCategoryCount}
+                  onChange={(e) => actions.setMaxCategoryCount(parseInt(e.target.value, 10))}
+                  className="flex-1 h-1.5 bg-muted rounded-lg appearance-none cursor-pointer"
+                />
+                <span className="text-[10px] text-muted-foreground">50</span>
+              </div>
+            </div>
+          </div>
           
           {/* 最大并发 */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg border bg-card">
