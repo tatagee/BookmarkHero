@@ -136,7 +136,7 @@ export const en: TranslationKeys = {
   'ai.merge.logDesc': '[Organize] Merged duplicate folder "{name}"',
 
   // === Deep Mode Warning ===
-  'ai.deep.warning': 'Your library has {count} bookmarks. Deep organizing will analyze each one via AI, which may consume a significant amount of tokens. Continue?',
+  'ai.deep.warning': 'Deep Mode will analyze {count} bookmarks one by one, estimated to consume ~{tokens} tokens. Confirm and continue?',
   'ai.deep.confirmBtn': 'Continue',
   'ai.deep.cancelBtn': 'Cancel',
 

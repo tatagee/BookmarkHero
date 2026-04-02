@@ -153,9 +153,20 @@ export function AIClassifierPanel() {
         return;
       }
 
-      // ── Step 1.5: 深度模式超过 500 条时弹出提醒 ──
-      if (scanMode === 'deep' && collected.length >= 500) {
-        const confirmed = window.confirm(t('ai.deep.warning', { count: collected.length }));
+      // ── Step 1.5: 深度模式弹出预估 Token 提醒 ──
+      if (scanMode === 'deep') {
+        // 基于历史测试数据预估: 609个书签耗费 350K tokens，平均约 575 token/书签
+        const estimatedTokens = collected.length * 575;
+        let tokenStr = '';
+        if (estimatedTokens < 1000) {
+          tokenStr = estimatedTokens.toString();
+        } else if (estimatedTokens < 1000000) {
+          tokenStr = (estimatedTokens / 1000).toFixed(1) + 'K';
+        } else {
+          tokenStr = (estimatedTokens / 1000000).toFixed(2) + 'M';
+        }
+
+        const confirmed = window.confirm(t('ai.deep.warning', { count: collected.length, tokens: tokenStr }));
         if (!confirmed) {
           setIsRunning(false);
           return;

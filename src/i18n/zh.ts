@@ -136,7 +136,7 @@ export const zh: TranslationKeys = {
   'ai.merge.logDesc': '[整理] 合并了重复文件夹「{name}」',
 
   // === Deep Mode Warning ===
-  'ai.deep.warning': '当前书签库共 {count} 个书签，深度整理将逐条调用 AI 分析，可能消耗大量 Token。是否继续？',
+  'ai.deep.warning': '本次深度整理将逐条分析 {count} 个书签，预计约消耗 {tokens} Tokens。是否确认并继续？',
   'ai.deep.confirmBtn': '继续整理',
   'ai.deep.cancelBtn': '取消',
 
