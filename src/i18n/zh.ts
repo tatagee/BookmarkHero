@@ -129,6 +129,17 @@ export const zh: TranslationKeys = {
   'ai.guide.quick': '快速模式：自动把外层未归类的松散书签放入合适的文件夹中。',
   'ai.guide.deep': '深度模式：复查分类文件夹内的书签，仅当分类明显不合理时才建议调整，修复多次整理导致的混乱。',
 
+  // === Folder Merge ===
+  'ai.merge.running': '正在检测重复文件夹...',
+  'ai.merge.done': '✅ 已合并 {groups} 组重复文件夹，移动了 {items} 个书签',
+  'ai.merge.none': '未发现重复文件夹，跳过合并',
+  'ai.merge.logDesc': '[整理] 合并了重复文件夹「{name}」',
+
+  // === Deep Mode Warning ===
+  'ai.deep.warning': '当前书签库共 {count} 个书签，深度整理将逐条调用 AI 分析，可能消耗大量 Token。是否继续？',
+  'ai.deep.confirmBtn': '继续整理',
+  'ai.deep.cancelBtn': '取消',
+
   // === OperationLogPanel ===
   'log.title': '操作历史',
   'log.empty': '暂无操作历史',

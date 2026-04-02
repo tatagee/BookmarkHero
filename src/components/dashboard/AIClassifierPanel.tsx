@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useBookmarkStore } from '../../stores/bookmark.store';
 import { ClassificationService } from '../../core/services/classification.service';
+import { DuplicateFolderMerger } from '../../core/services/duplicate-folder-merger';
 import type { ClassificationResult } from '../../core/providers/types';
 import { Button } from '../ui/button';
 import { Loader2, ArrowRight, Check, FolderSearch, Zap, Search, Sparkles } from 'lucide-react';
@@ -47,17 +48,14 @@ function collectRootBookmarks(
   return items;
 }
 
-/** 递归遍历全树，收集所有分类文件夹中的带 URL 书签（深度模式） 
- * @param isRootLevel 是否是根节点直挂的内容。我们将排除这部分，因为那是“快速整理”的职责。
- */
+/** 递归遍历全树，收集所有书签（深度模式：包含全部书签） */
 function collectAllBookmarks(
   nodes: chrome.bookmarks.BookmarkTreeNode[],
-  currentPath: string,
-  isRootLevel: boolean = false
+  currentPath: string
 ): BookmarkItem[] {
   const items: BookmarkItem[] = [];
   for (const node of nodes) {
-    if (node.url && !isRootLevel) {
+    if (node.url) {
       items.push({
         id: node.id,
         title: node.title,
@@ -67,7 +65,7 @@ function collectAllBookmarks(
     }
     if (node.children) {
       const nextPath = currentPath ? `${currentPath}/${node.title}` : node.title;
-      items.push(...collectAllBookmarks(node.children, nextPath, false));
+      items.push(...collectAllBookmarks(node.children, nextPath));
     }
   }
   return items;
@@ -93,7 +91,6 @@ export function AIClassifierPanel() {
     };
   }, []);
 
-  const tree = useBookmarkStore((state) => state.tree);
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
   const maxConcurrency = useSettingsStore((state) => state.maxConcurrency);
   const addLog = useLogStore((state) => state.addLog);
@@ -106,77 +103,103 @@ export function AIClassifierPanel() {
     setItems([]);
     setFilterTab('move');
 
-    // 1. 收集书签（根据「包含书签栏」开关过滤）
-    const allRootNodes = tree[0]?.children || [];
-    const rootNodes = allRootNodes.filter((node) => {
-      if (!includeBookmarksBar) {
-        // Chrome 书签栏固定 ID 为 '1'，同时兼容不同语言 locale 的名称匹配
-        if (node.id === '1' || /^(Bookmarks bar|书签栏|Bookmarks Bar)$/i.test(node.title)) {
-          return false;
+    try {
+      // ── Step 0: 合并重复文件夹（本地逻辑，不消耗 API） ──
+      toast.info(t('ai.merge.running'));
+      const merger = new DuplicateFolderMerger();
+      const { result: mergeResult } = await merger.merge(includeBookmarksBar);
+
+      if (mergeResult.mergedGroups > 0) {
+        addLog({
+          id: crypto.randomUUID(),
+          actionId: 'merge.folder',
+          description: t('ai.merge.done', { groups: mergeResult.mergedGroups, items: mergeResult.movedItems }),
+        });
+        toast.success(t('ai.merge.done', { groups: mergeResult.mergedGroups, items: mergeResult.movedItems }));
+        // 刷新书签树以反映合并后的状态
+        await refreshBookmarks();
+      } else {
+        toast.info(t('ai.merge.none'));
+      }
+
+      // ── Step 1: 重新收集书签（使用合并后的最新树） ──
+      const freshTree = useBookmarkStore.getState().tree;
+      const allRootNodes = freshTree[0]?.children || [];
+      const rootNodes = allRootNodes.filter((node) => {
+        if (!includeBookmarksBar) {
+          if (node.id === '1' || /^(Bookmarks bar|书签栏|Bookmarks Bar)$/i.test(node.title)) {
+            return false;
+          }
+        }
+        return true;
+      });
+      let collected: BookmarkItem[];
+
+      if (scanMode === 'quick') {
+        // 快速模式：只收集根目录下的松散书签
+        collected = collectRootBookmarks(rootNodes);
+      } else {
+        // 深度模式：收集全部书签
+        const all: BookmarkItem[] = [];
+        for (const root of rootNodes) {
+          all.push(...collectAllBookmarks(root.children || [], root.title));
+        }
+        collected = all;
+      }
+
+      if (collected.length === 0) {
+        toast.info('未能提取到任何书签。如果您的书签都在书签栏中，请勾选「包含书签栏」后再试。');
+        setIsRunning(false);
+        return;
+      }
+
+      // ── Step 1.5: 深度模式超过 500 条时弹出提醒 ──
+      if (scanMode === 'deep' && collected.length >= 500) {
+        const confirmed = window.confirm(t('ai.deep.warning', { count: collected.length }));
+        if (!confirmed) {
+          setIsRunning(false);
+          return;
         }
       }
-      return true;
-    });
-    let collected: BookmarkItem[];
 
-    if (scanMode === 'quick') {
-      // 快速模式：包含所有根节点下直接挂的松散书签
-      collected = collectRootBookmarks(rootNodes);
-    } else {
-      // 深度模式：遍历全树子节点 (分析已分类书签，排除根目录松散书签)
-      const all: BookmarkItem[] = [];
-      for (const root of rootNodes) {
-        all.push(...collectAllBookmarks(root.children || [], root.title, true));
-      }
-      collected = all;
-    }
+      // ── Step 2: AI 逐条分析 ──
+      setProgress({ done: 0, total: collected.length });
 
-    if (collected.length === 0) {
-      toast.info('未能提取到任何书签。如果您的书签都在书签栏中，请勾选「包含书签栏」后再试。');
-      setIsRunning(false);
-      return;
-    }
-
-    setProgress({ done: 0, total: collected.length });
-
-    try {
-      // 2. 立刻批量调用 AI 分析，用并发队列限流
       const service = new ClassificationService();
-      await service.preloadFolders(); // 预加载文件夹列表，所有并发分析复用同一份缓存
-    const queue = new ConcurrencyQueue(maxConcurrency);
-    queueRef.current = queue;
-    const results: BookmarkItem[] = [];
-    let completed = 0;
+      await service.preloadFolders();
+      const queue = new ConcurrencyQueue(maxConcurrency);
+      queueRef.current = queue;
+      const results: BookmarkItem[] = [];
+      let completed = 0;
 
-    const tasks = collected.map((item) => async () => {
-      try {
-        const res = await service.classify({
-          title: item.title,
-          url: item.url,
-          currentPath: item.currentPath,
-        }, { mode: scanMode });
-        results.push({ ...item, result: res });
-      } catch (err) {
-        console.error(`[AI整理] ${item.title} 分析失败:`, err);
-        // 出错的不放入结果
-      } finally {
-        completed++;
-        setProgress({ done: completed, total: collected.length });
+      const tasks = collected.map((item) => async () => {
+        try {
+          const res = await service.classify({
+            title: item.title,
+            url: item.url,
+            currentPath: item.currentPath,
+          }, { mode: scanMode });
+          results.push({ ...item, result: res });
+        } catch (err) {
+          console.error(`[AI整理] ${item.title} 分析失败:`, err);
+        } finally {
+          completed++;
+          setProgress({ done: completed, total: collected.length });
+        }
+      });
+
+      await Promise.all(tasks.map((t) => queue.run(t)));
+
+      if (results.length === 0 && collected.length > 0) {
+        toast.error('全部分析均失败，可能是 API 额度不足 (429) 或网络连接存在问题。详情请查看扩展程序的控制台日志。');
       }
-    });
 
-    await Promise.all(tasks.map((t) => queue.run(t)));
-
-    if (results.length === 0 && collected.length > 0) {
-      toast.error('全部分析均失败，可能是 API 额度不足 (429) 或网络连接存在问题。详情请查看扩展程序的控制台日志。');
-    }
-
-    // 3. 按 move 优先排序结果
-    results.sort((a, b) => {
-      if (a.result?.action === 'move' && b.result?.action !== 'move') return -1;
-      if (a.result?.action !== 'move' && b.result?.action === 'move') return 1;
-      return (b.result?.confidence ?? 0) - (a.result?.confidence ?? 0);
-    });
+      // 3. 按 move 优先排序结果
+      results.sort((a, b) => {
+        if (a.result?.action === 'move' && b.result?.action !== 'move') return -1;
+        if (a.result?.action !== 'move' && b.result?.action === 'move') return 1;
+        return (b.result?.confidence ?? 0) - (a.result?.confidence ?? 0);
+      });
 
       setItems(results);
       queueRef.current = null;

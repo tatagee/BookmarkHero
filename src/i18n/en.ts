@@ -129,6 +129,17 @@ export const en: TranslationKeys = {
   'ai.guide.quick': 'Quick Mode: Organize loose root bookmarks (Fast & Recommended).',
   'ai.guide.deep': 'Deep Mode: Re-check bookmarks already in folders to fix previous organization messes.',
 
+  // === Folder Merge ===
+  'ai.merge.running': 'Detecting duplicate folders...',
+  'ai.merge.done': '✅ Merged {groups} duplicate folder group(s), moved {items} bookmark(s)',
+  'ai.merge.none': 'No duplicate folders found, skipping merge',
+  'ai.merge.logDesc': '[Organize] Merged duplicate folder "{name}"',
+
+  // === Deep Mode Warning ===
+  'ai.deep.warning': 'Your library has {count} bookmarks. Deep organizing will analyze each one via AI, which may consume a significant amount of tokens. Continue?',
+  'ai.deep.confirmBtn': 'Continue',
+  'ai.deep.cancelBtn': 'Cancel',
+
   // === OperationLogPanel ===
   'log.title': 'Operation History',
   'log.empty': 'No operation history',

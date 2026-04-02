@@ -127,6 +127,17 @@ export type TranslationKeys = {
   'ai.guide.quick': string; // 快速模式：只分析根目录下的松散书签（推荐首次使用）
   'ai.guide.deep': string; // 深度模式：分析所有书签的分类是否合理（API 调用较多）
 
+  // === Folder Merge ===
+  'ai.merge.running': string; // 正在检测重复文件夹...
+  'ai.merge.done': string; // 已合并 {groups} 组重复文件夹，移动了 {items} 个书签
+  'ai.merge.none': string; // 未发现重复文件夹
+  'ai.merge.logDesc': string; // [整理] 合并了重复文件夹「{name}」
+
+  // === Deep Mode Warning ===
+  'ai.deep.warning': string; // 当前书签库共 {count} 个书签，深度整理将逐条分析，可能消耗大量 Token，是否继续？
+  'ai.deep.confirmBtn': string; // 继续整理
+  'ai.deep.cancelBtn': string; // 取消
+
   // === OperationLogPanel ===
   'log.title': string; // 操作历史
   'log.empty': string; // 暂无操作历史
