@@ -136,6 +136,54 @@ ${isDeepMode
     }
   }
 
+  async groupDuplicateFolders(folderNames: string[], language?: string): Promise<string[][]> {
+    const { ollamaUrl, ollamaModel } = useSettingsStore.getState();
+    if (folderNames.length < 2) return [];
+
+    const prompt = `You are a semantic semantic folder matcher. You are given a list of folder names. 
+Group the folder names that have basically the exact same meaning or represent the same category (e.g. "Frontend" and "前端开发", "Design" and "UI/UX"). Consider language combinations like English and Chinese (${language || 'any'}).
+You must return your groupings as a JSON array of arrays of strings. Each inner array should contain the exact folder names from the input list that mean the same thing. Do not include folders that don't have duplicates.
+Only output valid JSON array, do not output any markdown blocks or other text.
+
+List of folder names:
+${JSON.stringify(folderNames, null, 2)}`;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for semantic group
+
+      const resp = await fetch(`${ollamaUrl}/api/generate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: ollamaModel || 'llama3',
+          prompt,
+          stream: false,
+          format: 'json',
+          options: { temperature: 0.1 },
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!resp.ok) {
+        throw new Error(`Ollama request failed: ${resp.status}`);
+      }
+
+      const data = await resp.json();
+      const parsed = JSON.parse(data.response);
+      if (Array.isArray(parsed)) {
+        return parsed as string[][];
+      }
+      return [];
+    } catch (error) {
+      console.warn('[OllamaProvider] Semantic grouping failed:', error);
+      return [];
+    }
+  }
+
   async classifyBatch(
     bookmarks: { id: string; title: string; url: string; currentPath?: string }[],
     existingFolders: { id: string; path: string }[],

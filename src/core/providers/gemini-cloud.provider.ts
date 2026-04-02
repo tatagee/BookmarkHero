@@ -92,6 +92,45 @@ export class GeminiCloudProvider implements IAIProvider {
     return results;
   }
 
+  async groupDuplicateFolders(folderNames: string[], language?: string): Promise<string[][]> {
+    const { geminiApiKey, geminiModel } = useSettingsStore.getState();
+    if (!geminiApiKey) {
+      throw new Error('Gemini API Key is not configured.');
+    }
+
+    if (folderNames.length < 2) return [];
+
+    const genAI = new GoogleGenerativeAI(geminiApiKey);
+    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
+
+    const prompt = `You are a semantic semantic folder matcher. You are given a list of folder names. 
+Group the folder names that have basically the exact same meaning or represent the same category (e.g. "Frontend" and "前端开发", "Design" and "UI/UX"). Consider language combinations like English and Chinese (${language || 'any'}).
+You must return your groupings as a JSON array of arrays of strings. Each inner array should contain the exact folder names from the input list that mean the same thing. Do not include folders that don't have duplicates.
+Only output valid JSON array, do not output any markdown blocks or other text.
+
+List of folder names:
+${JSON.stringify(folderNames, null, 2)}`;
+
+    try {
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const responseText = result.response.text();
+      const parsed = JSON.parse(responseText);
+      if (Array.isArray(parsed)) {
+        return parsed as string[][];
+      }
+      return [];
+    } catch (error) {
+      console.warn('[GeminiCloudProvider] Semantic grouping failed:', error);
+      return [];
+    }
+  }
+
   private buildPrompt(
     bookmark: { title: string; url: string; currentPath?: string },
     folders: { id: string; path: string }[],

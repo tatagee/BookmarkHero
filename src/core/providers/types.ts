@@ -30,4 +30,8 @@ export interface IAIProvider {
     existingFolders: { id: string; path: string }[],
     options?: ClassifyOptions
   ): Promise<Map<string, ClassificationResult>>;
+  groupDuplicateFolders?(
+    folderNames: string[],
+    language?: string
+  ): Promise<string[][]>;
 }

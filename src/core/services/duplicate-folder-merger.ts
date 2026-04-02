@@ -1,5 +1,6 @@
 import { getBookmarkTree, moveBookmark, removeBookmark } from '../../shared/chrome-api';
-
+import { useSettingsStore } from '../../stores/settings.store';
+import { AIProviderFactory } from '../providers';
 /**
  * 合并结果统计
  */
@@ -75,7 +76,7 @@ export class DuplicateFolderMerger {
     // 1. 收集直接子文件夹（无 URL 的节点即为文件夹）
     const subFolders = children.filter(n => !n.url && n.children !== undefined);
 
-    // 2. 按名称分组
+    // 2. 按名称分组(精确一致)
     const nameGroups = new Map<string, chrome.bookmarks.BookmarkTreeNode[]>();
     for (const folder of subFolders) {
       const name = folder.title.trim();
@@ -83,6 +84,38 @@ export class DuplicateFolderMerger {
       const group = nameGroups.get(name) || [];
       group.push(folder);
       nameGroups.set(name, group);
+    }
+
+    // 2.5 使用 AI 进行语义相似合并
+    const uniqueNames = Array.from(nameGroups.keys());
+    if (uniqueNames.length >= 2) {
+      const { activeAiProvider, categoryLanguage } = useSettingsStore.getState();
+      try {
+        const provider = AIProviderFactory.createProvider(activeAiProvider);
+        if (provider.groupDuplicateFolders) {
+          const semanticGroups = await provider.groupDuplicateFolders(uniqueNames, categoryLanguage);
+          for (const group of semanticGroups) {
+            if (group.length < 2) continue;
+            // group 中第一个元素作为主要名称保留，后续元素包含的全部合并进去
+            const mainName = group[0];
+            const mainNodes = nameGroups.get(mainName) || [];
+            
+            for (let i = 1; i < group.length; i++) {
+              const dupName = group[i];
+              const dupNodes = nameGroups.get(dupName);
+              if (dupNodes) {
+                mainNodes.push(...dupNodes);
+                nameGroups.delete(dupName);
+              }
+            }
+            if (mainNodes.length > 0) {
+              nameGroups.set(mainName, mainNodes);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[DuplicateFolderMerger] Semantic group failed, falling back to exact match', err);
+      }
     }
 
     // 3. 对每组重复文件夹执行合并
