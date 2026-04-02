@@ -53,18 +53,25 @@ export default function Options() {
       <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
         {/* 页头 */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b">
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('app.title')}</h1>
-              <button
-                onClick={() => actions.setUiLanguage(uiLanguage === 'zh' ? 'en' : 'zh')}
-                className="text-xs font-medium px-2 py-0.5 rounded border bg-muted/30 hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
-                title={t('app.toggleLang')}
-              >
-                {t('app.langName')}
-              </button>
+          <div className="flex items-center gap-4">
+            <img 
+              src="/concept-logo.jpeg" 
+              alt="BookmarkHero" 
+              className="w-12 h-12 rounded-lg shadow-sm object-cover"
+            />
+            <div>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">{t('app.title')}</h1>
+                <button
+                  onClick={() => actions.setUiLanguage(uiLanguage === 'zh' ? 'en' : 'zh')}
+                  className="text-xs font-medium px-2 py-0.5 rounded border bg-muted/30 hover:bg-muted text-muted-foreground transition-colors cursor-pointer"
+                  title={t('app.toggleLang')}
+                >
+                  {t('app.langName')}
+                </button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">{t('app.subtitle')}</p>
             </div>
-            <p className="text-sm text-muted-foreground mt-1">{t('app.subtitle')}</p>
           </div>
           <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="shadow-sm">
             <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
