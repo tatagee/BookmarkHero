@@ -86,7 +86,7 @@ ${depthConstraint}
 用户已有文件夹：
 ${folderListStr}
 
-待审查书签：
+待整理书签：
 标题：${bookmark.title}
 URL：${bookmark.url}
 ${currentLocation}

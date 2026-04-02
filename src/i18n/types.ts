@@ -125,7 +125,7 @@ export type TranslationKeys = {
   'ai.moveFailed': string; // 移动失败: {err}
   'ai.guide.title': string; // 选择模式后点击「开始整理」
   'ai.guide.quick': string; // 快速模式：只分析根目录下的松散书签（推荐首次使用）
-  'ai.guide.deep': string; // 深度模式：审查所有书签的分类是否合理（API 调用较多）
+  'ai.guide.deep': string; // 深度模式：分析所有书签的分类是否合理（API 调用较多）
 
   // === OperationLogPanel ===
   'log.title': string; // 操作历史

@@ -101,8 +101,8 @@ export const zh: TranslationKeys = {
   'ai.subtitle': '一键扫描并分析，自动找出需要重新归类的书签。',
   'ai.mode.quick': '快速',
   'ai.mode.quickTip': '只整理外层未分类的松散书签（速度快）',
-  'ai.mode.deep': '审查',
-  'ai.mode.deepTip': '审查并纠正已分类的书签（仅建议调整放错的内容）',
+  'ai.mode.deep': '深度',
+  'ai.mode.deepTip': '深度扫描并纠正已分类的书签（仅建议调整放错的内容）',
   'ai.includeBookmarksBar': '包含书签栏',
   'ai.includeBookmarksBarTip': '书签栏是高频区域，默认不参与整理',
   'ai.btnStart': '开始整理',
@@ -127,7 +127,7 @@ export const zh: TranslationKeys = {
   'ai.moveFailed': '移动失败: {err}',
   'ai.guide.title': '选择模式后点击「开始整理」',
   'ai.guide.quick': '快速模式：自动把外层未归类的松散书签放入合适的文件夹中。',
-  'ai.guide.deep': '审查模式：复查分类文件夹内的书签，仅当分类明显不合理时才建议调整，修复多次整理导致的混乱。',
+  'ai.guide.deep': '深度模式：复查分类文件夹内的书签，仅当分类明显不合理时才建议调整，修复多次整理导致的混乱。',
 
   // === OperationLogPanel ===
   'log.title': '操作历史',

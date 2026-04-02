@@ -123,7 +123,7 @@ export function AIClassifierPanel() {
       // 快速模式：包含所有根节点下直接挂的松散书签
       collected = collectRootBookmarks(rootNodes);
     } else {
-      // 深度模式：遍历全树子节点 (审查已分类书签，排除根目录松散书签)
+      // 深度模式：遍历全树子节点 (分析已分类书签，排除根目录松散书签)
       const all: BookmarkItem[] = [];
       for (const root of rootNodes) {
         all.push(...collectAllBookmarks(root.children || [], root.title, true));
