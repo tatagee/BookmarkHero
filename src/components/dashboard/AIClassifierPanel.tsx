@@ -83,6 +83,7 @@ export function AIClassifierPanel() {
   const [hasRun, setHasRun] = useState(false);
   const [includeBookmarksBar, setIncludeBookmarksBar] = useState(false);
   const [deepConfirmData, setDeepConfirmData] = useState<{count: number, tokens: string} | null>(null);
+  const [folderConflictData, setFolderConflictData] = useState<{currentCount: number, maxCount: number} | null>(null);
 
   const queueRef = useRef<ConcurrencyQueue | null>(null);
 
@@ -95,12 +96,38 @@ export function AIClassifierPanel() {
 
   const refreshBookmarks = useBookmarkStore((state) => state.refreshBookmarks);
   const maxConcurrency = useSettingsStore((state) => state.maxConcurrency);
+  const preserveExistingFolders = useSettingsStore((state) => state.preserveExistingFolders);
+  const maxCategoryCount = useSettingsStore((state) => state.maxCategoryCount);
+  const settingsActions = useSettingsStore((state) => state.actions);
   const addLog = useLogStore((state) => state.addLog);
   const t = useT();
 
   // === 核心：一键扫描 + AI 分析 ===
-  const handleStart = async (skipConfirmCheck = false) => {
-    // ── Pre-flight 同步校验（解决插件中 async 后 window.confirm 报错假死的问题） ──
+  /** 计算当前用户自建的一级文件夹数量（排除系统根目录本身） */
+  const countCurrentFolders = (): number => {
+    const freshTree = useBookmarkStore.getState().tree;
+    const allRootNodes = freshTree[0]?.children || [];
+    let count = 0;
+    for (const root of allRootNodes) {
+      // 每个根节点下的直接子文件夹就是用户的一级分类
+      for (const child of root.children || []) {
+        if (!child.url) count++; // 没有 url 的就是文件夹
+      }
+    }
+    return count;
+  };
+
+  const handleStart = async (skipConfirmCheck = false, skipFolderConflictCheck = false) => {
+    // ── Pre-flight 0: 文件夹数量冲突检测（在 token 消耗确认之前） ──
+    if (scanMode === 'deep' && preserveExistingFolders && !skipFolderConflictCheck) {
+      const currentFolderCount = countCurrentFolders();
+      if (currentFolderCount > maxCategoryCount) {
+        setFolderConflictData({ currentCount: currentFolderCount, maxCount: maxCategoryCount });
+        return;
+      }
+    }
+
+    // ── Pre-flight 1: 深度模式 Token 消耗确认 ──
     if (scanMode === 'deep' && !skipConfirmCheck) {
       const freshTree = useBookmarkStore.getState().tree;
       const allRootNodes = freshTree[0]?.children || [];
@@ -200,7 +227,10 @@ export function AIClassifierPanel() {
       // === 核心：深度模式下，先进行大纲整体规划 ===
       if (scanMode === 'deep') {
         toast.info(t('ai.deep.blueprinting'));
-        await service.generateTaxonomyBlueprint(collected.map(item => ({ title: item.title, url: item.url })));
+        await service.generateTaxonomyBlueprint(
+          collected.map(item => ({ title: item.title, url: item.url })),
+          { preserveExistingFolders }
+        );
         toast.success(t('ai.deep.blueprintingDone'));
       }
 
@@ -467,6 +497,19 @@ export function AIClassifierPanel() {
             </button>
           </div>
 
+          {/* 保留现有文件夹开关 — 仅深度模式时显示 */}
+          {scanMode === 'deep' && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title={t('ai.preserveFoldersTip')}>
+              <input
+                type="checkbox"
+                checked={preserveExistingFolders}
+                onChange={(e) => settingsActions.setPreserveExistingFolders(e.target.checked)}
+                className="rounded border-input"
+              />
+              {t('ai.preserveFolders')}
+            </label>
+          )}
+
           {/* 书签栏保护开关 */}
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title={t('ai.includeBookmarksBarTip')}>
             <input
@@ -635,6 +678,31 @@ export function AIClassifierPanel() {
                 handleStart(true);
               }}>
                 {t('ai.deep.confirmBtn')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 文件夹数量冲突确认弹窗 */}
+      {folderConflictData && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm w-full font-sans border border-slate-200 dark:border-slate-700">
+            <h3 className="text-lg font-bold mb-3 text-slate-800 dark:text-slate-100">
+              ⚠️ {t('ai.folderConflict.title')}
+            </h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+              {t('ai.folderConflict.message', { current: folderConflictData.currentCount, max: folderConflictData.maxCount })}
+            </p>
+            <div className="flex justify-end gap-3 rounded-b">
+              <Button variant="outline" onClick={() => setFolderConflictData(null)}>
+                {t('ai.deep.cancelBtn')}
+              </Button>
+              <Button variant="default" onClick={() => {
+                setFolderConflictData(null);
+                handleStart(false, true);
+              }}>
+                {t('ai.folderConflict.confirmBtn')}
               </Button>
             </div>
           </div>

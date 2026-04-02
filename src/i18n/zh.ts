@@ -129,6 +129,13 @@ export const zh: TranslationKeys = {
   'ai.guide.quick': '快速模式：自动把外层未归类的松散书签放入合适的文件夹中。',
   'ai.guide.deep': '深度模式：复查分类文件夹内的书签，仅当分类明显不合理时才建议调整，修复多次整理导致的混乱。',
 
+  // === Preserve Existing Folders ===
+  'ai.preserveFolders': '保留当前文件夹',
+  'ai.preserveFoldersTip': '勾选后 AI 将优先保留你已创建的文件夹结构，仅在不足时补充新分类',
+  'ai.folderConflict.title': '文件夹数量冲突',
+  'ai.folderConflict.message': '当前有 {current} 个文件夹，但最大分类数设为 {max}。继续整理将无法保留所有现有文件夹，部分文件夹将被重新整理。',
+  'ai.folderConflict.confirmBtn': '继续整理',
+
   // === Folder Merge ===
   'ai.merge.running': '正在检测重复文件夹...',
   'ai.merge.done': '✅ 已合并 {groups} 组重复文件夹，移动了 {items} 个书签',
@@ -173,6 +180,8 @@ export const zh: TranslationKeys = {
   'settings.general.maxDepthTip': '1 层：直接置于大类下；2 层：允许嵌套子分类。',
   'settings.general.maxCount': '📂 最大文件夹数量 ({count})',
   'settings.general.maxCountTip': '深度整理时，强制将书签重组到不超过此数量的分类中，适用于精简管理。',
+  'settings.general.currentFolderCount': '当前书签文件夹共 {count} 个',
+  'settings.general.maxCountWarning': '⚠ 设置值低于当前文件夹数 ({current})，深度整理时将无法保留所有现有文件夹',
   'settings.prefsTitle': '分类偏好',
   'settings.test.btn': '测试连接',
   'settings.test.testing': '测试中...',

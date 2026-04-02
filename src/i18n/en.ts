@@ -129,6 +129,13 @@ export const en: TranslationKeys = {
   'ai.guide.quick': 'Quick Mode: Organize loose root bookmarks (Fast & Recommended).',
   'ai.guide.deep': 'Deep Mode: Re-check bookmarks already in folders to fix previous organization messes.',
 
+  // === Preserve Existing Folders ===
+  'ai.preserveFolders': 'Preserve existing folders',
+  'ai.preserveFoldersTip': 'AI will prioritize keeping your existing folder structure, only adding new categories when needed',
+  'ai.folderConflict.title': 'Folder Count Conflict',
+  'ai.folderConflict.message': 'You currently have {current} folders, but the max is set to {max}. Continuing will reorganize some existing folders.',
+  'ai.folderConflict.confirmBtn': 'Continue Anyway',
+
   // === Folder Merge ===
   'ai.merge.running': 'Detecting duplicate folders...',
   'ai.merge.done': '✅ Merged {groups} duplicate folder group(s), moved {items} bookmark(s)',
@@ -173,6 +180,8 @@ export const en: TranslationKeys = {
   'settings.general.maxDepthTip': '1 level: Flat categories. 2 levels: Includes sub-categories.',
   'settings.general.maxCount': '📂 Max Folder Count ({count})',
   'settings.general.maxCountTip': 'In Deep Mode, restricts the AI to reorganize bookmarks into no more than this many folders to keep it concise.',
+  'settings.general.currentFolderCount': 'Currently {count} bookmark folders',
+  'settings.general.maxCountWarning': '⚠ Value is below current folder count ({current}). Existing folders may not all be preserved during deep organize.',
   'settings.prefsTitle': 'Classification Preferences',
   'settings.test.btn': 'Test Connection',
   'settings.test.testing': 'Testing...',

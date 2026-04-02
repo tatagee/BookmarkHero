@@ -12,6 +12,8 @@ export interface SettingsState {
   maxCategoryDepth: 1 | 2;
   /** 控制书签文件夹的最大数量，最低10，最高50 */
   maxCategoryCount: number;
+  /** 深度整理时，是否保留用户已有的书签文件夹结构 */
+  preserveExistingFolders: boolean;
   /** AI 建议分类文件夹的命名语言 */
   categoryLanguage: 'zh' | 'en';
   /** 全局域名豁免名单（扫瞄时遇到这些域名会直接跳过） */
@@ -32,6 +34,7 @@ export interface SettingsState {
     setCategoryLanguage: (lang: 'zh' | 'en') => void;
     setMaxCategoryDepth: (depth: 1 | 2) => void;
     setMaxCategoryCount: (count: number) => void;
+    setPreserveExistingFolders: (val: boolean) => void;
     
     // UI AI
     setActiveAiProvider: (providerId: 'gemini-cloud' | 'ollama') => void;
@@ -53,6 +56,7 @@ export const useSettingsStore = create<SettingsState>()(
       maxConcurrency: 10,
       maxCategoryDepth: 2,
       maxCategoryCount: 30, // 默认最大文件夹数为 30
+      preserveExistingFolders: true, // 默认保留用户现有文件夹结构
       uiLanguage: 'zh',
       categoryLanguage: 'zh',
       ignoreDomains: ['localhost', '127.0.0.1'], // 移除 github.com, 它的死链应该被检测
@@ -79,6 +83,7 @@ export const useSettingsStore = create<SettingsState>()(
         setCategoryLanguage: (lang: 'zh' | 'en') => set({ categoryLanguage: lang }),
         setMaxCategoryDepth: (depth: 1 | 2) => set({ maxCategoryDepth: depth }),
         setMaxCategoryCount: (count) => set({ maxCategoryCount: Math.max(10, Math.min(50, count)) }),
+        setPreserveExistingFolders: (val: boolean) => set({ preserveExistingFolders: val }),
         
         setActiveAiProvider: (p: 'gemini-cloud' | 'ollama') => set({ activeAiProvider: p }),
         setGeminiApiKey: (key: string) => set({ geminiApiKey: key.trim() }),

@@ -51,10 +51,10 @@ describe('OperationLogPanel', () => {
     mockLogs = [];
   });
 
-  it('没有日志时不应渲染任何内容', () => {
+  it('没有日志时应显示暂无记录提示', () => {
     mockLogs = [];
-    const { container } = render(<OperationLogPanel />);
-    expect(container.innerHTML).toBe('');
+    render(<OperationLogPanel />);
+    expect(screen.getByText('暂无操作历史')).toBeInTheDocument();
   });
 
   it('应该显示操作历史标题和日志条目', () => {

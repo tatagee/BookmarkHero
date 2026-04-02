@@ -38,6 +38,7 @@ export interface IAIProvider {
   generateTaxonomy?(
     bookmarksSubSample: { title: string; url: string }[],
     maxCategories: number,
-    language?: string
+    language?: string,
+    existingFolders?: string[]
   ): Promise<string[]>;
 }

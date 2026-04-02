@@ -127,6 +127,13 @@ export type TranslationKeys = {
   'ai.guide.quick': string; // 快速模式：只分析根目录下的松散书签（推荐首次使用）
   'ai.guide.deep': string; // 深度模式：分析所有书签的分类是否合理（API 调用较多）
 
+  // === Preserve Existing Folders ===
+  'ai.preserveFolders': string; // 保留当前文件夹
+  'ai.preserveFoldersTip': string; // 勾选后 AI 将优先保留你已创建的文件夹结构
+  'ai.folderConflict.title': string; // 文件夹数量冲突
+  'ai.folderConflict.message': string; // 当前有 {current} 个文件夹但最大分类数设为 {max}...
+  'ai.folderConflict.confirmBtn': string; // 继续整理
+
   // === Folder Merge ===
   'ai.merge.running': string; // 正在检测重复文件夹...
   'ai.merge.done': string; // 已合并 {groups} 组重复文件夹，移动了 {items} 个书签
@@ -171,6 +178,8 @@ export type TranslationKeys = {
   'settings.general.maxDepthTip': string;
   'settings.general.maxCount': string;
   'settings.general.maxCountTip': string;
+  'settings.general.currentFolderCount': string; // 当前书签文件夹共 {count} 个
+  'settings.general.maxCountWarning': string; // 设置值低于当前文件夹数({current})...
   'settings.prefsTitle': string; // 控制 AI 建议的新文件夹使用的语言，已有文件夹名称不受影响。
   'settings.test.btn': string; // 测试连接
   'settings.test.testing': string; // 测试中...

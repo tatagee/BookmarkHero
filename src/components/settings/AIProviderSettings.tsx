@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSettingsStore, useSettingsActions } from '../../stores/settings.store';
+import { useBookmarkStore } from '../../stores/bookmark.store';
 import { AIProviderFactory } from '../../core/providers';
 import { Button } from '../ui/button';
 import { useT } from '../../i18n';
@@ -9,13 +10,24 @@ import { validateGeminiKey, validateOllamaUrl, sanitizeSettingValue } from '../.
 export function AIProviderSettings() {
   const settings = useSettingsStore();
   const actions = useSettingsActions();
+  const tree = useBookmarkStore((state) => state.tree);
   const t = useT();
   
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState('');
   const [valErrors, setValErrors] = useState<Record<string, string>>({});
 
-  // Removed useEffect to prevent cascading renders
+  // 计算当前用户自建的一级文件夹数量
+  const currentFolderCount = useMemo(() => {
+    const allRootNodes = tree[0]?.children || [];
+    let count = 0;
+    for (const root of allRootNodes) {
+      for (const child of root.children || []) {
+        if (!child.url) count++;
+      }
+    }
+    return count;
+  }, [tree]);
 
 
   const providers = AIProviderFactory.getAvailableProviders();
@@ -264,6 +276,16 @@ export function AIProviderSettings() {
               <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
                 {t('settings.general.maxCountTip')}
               </p>
+              {currentFolderCount > 0 && (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {t('settings.general.currentFolderCount', { count: currentFolderCount })}
+                </p>
+              )}
+              {settings.maxCategoryCount < currentFolderCount && (
+                <p className="text-[11px] text-red-500 font-medium mt-1">
+                  {t('settings.general.maxCountWarning', { current: currentFolderCount })}
+                </p>
+              )}
             </div>
             <div className="w-full sm:w-40 shrink-0 flex flex-col pt-1 sm:pt-0">
               <div className="flex items-center gap-2">

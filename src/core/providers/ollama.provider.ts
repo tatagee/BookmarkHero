@@ -196,9 +196,27 @@ ${JSON.stringify(folderNames, null, 2)}`;
   async generateTaxonomy(
     bookmarksSubSample: { title: string; url: string }[],
     maxCategories: number,
-    language?: string
+    language?: string,
+    existingFolders?: string[]
   ): Promise<string[]> {
     const { ollamaUrl, ollamaModel } = useSettingsStore.getState();
+
+    // 保留现有文件夹约束
+    const preserveInstruction = existingFolders && existingFolders.length > 0
+      ? `
+PRESERVE CONSTRAINT (HIGHEST PRIORITY):
+The following folders are the user's existing, curated folder structure. You MUST prioritize preserving them:
+<existing_folders>
+${existingFolders.map(f => `- ${f}`).join('\n')}
+</existing_folders>
+
+Rules:
+1. Include ALL of the above folders in your output (they count toward the ${maxCategories} limit).
+2. Only add NEW folders if the existing ones cannot adequately cover the bookmark topics.
+3. Total output (existing + new) MUST NOT exceed ${maxCategories}.
+4. If existing folders already equal or exceed ${maxCategories}, do NOT add new ones.
+`
+      : '';
 
     const prompt = `You are a professional taxonomy architect. Your task is to design an optimal, high-level folder structure to organize the provided bookmarks.
 CRITICAL CONSTRAINTS:
@@ -207,7 +225,7 @@ CRITICAL CONSTRAINTS:
 3. Return exactly a JSON array of strings, where each string is a full path (e.g. "Work", "Development/Frontend").
 4. Each category must be broad enough to capture related bookmarks but specific enough to be useful.
 5. Only output a valid JSON array, do not output markdown blocks or other text.
-
+${preserveInstruction}
 Sample bookmarks to analyze:
 ${JSON.stringify(bookmarksSubSample.map(b => ({ t: b.title, u: b.url })), null, 2)}`;
 

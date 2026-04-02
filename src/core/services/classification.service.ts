@@ -59,9 +59,11 @@ export class ClassificationService {
 
   /**
    * 针对深度整理模式，提取具有代表性的书签，生成顶层分类大纲
+   * @param options.preserveExistingFolders 如果为 true，将现有文件夹作为种子传递给 AI
    */
   async generateTaxonomyBlueprint(
-    bookmarks: { title: string; url: string }[]
+    bookmarks: { title: string; url: string }[],
+    options?: { preserveExistingFolders?: boolean }
   ): Promise<void> {
     const state = useSettingsStore.getState();
     const providerId = state.activeAiProvider;
@@ -78,10 +80,27 @@ export class ClassificationService {
       ? [...bookmarks].sort(() => 0.5 - Math.random()).slice(0, MAX_SAMPLE)
       : bookmarks;
 
+    // 如果启用了「保留现有文件夹」，从缓存中提取一级文件夹路径作为种子
+    let existingSeedFolders: string[] | undefined;
+    if (options?.preserveExistingFolders && this.cachedFolders) {
+      // 从缓存的文件夹树中提取用户自建的一级分类路径
+      // 排除 Chrome 系统根目录（书签栏、其他书签等 id 为 1 或 2 的节点）
+      existingSeedFolders = this.cachedFolders
+        .filter(f => {
+          // 跳过系统根目录本身
+          if (f.id === '1' || f.id === '2') return false;
+          // 只保留一级分类（路径格式为 "根/分类名"，恰好两段）
+          const parts = f.path.split('/').filter(Boolean);
+          return parts.length === 2;
+        })
+        .map(f => f.path);
+    }
+
     const taxonomyRoots = await provider.generateTaxonomy(
       sample, 
       state.maxCategoryCount, 
-      state.categoryLanguage
+      state.categoryLanguage,
+      existingSeedFolders
     );
 
     if (taxonomyRoots && taxonomyRoots.length > 0) {
