@@ -132,7 +132,8 @@ export type TranslationKeys = {
   'ai.preserveFoldersTip': string; // 勾选后 AI 将优先保留你已创建的文件夹结构
   'ai.folderConflict.title': string; // 文件夹数量冲突
   'ai.folderConflict.message': string; // 当前有 {current} 个文件夹但最大分类数设为 {max}...
-  'ai.folderConflict.confirmBtn': string; // 继续整理
+  'ai.folderConflict.preserveBtn': string; // 保留当前分类
+  'ai.folderConflict.reorganizeBtn': string; // 重新整理
 
   // === Folder Merge ===
   'ai.merge.running': string; // 正在检测重复文件夹...

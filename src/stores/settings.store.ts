@@ -64,7 +64,7 @@ export const useSettingsStore = create<SettingsState>()(
       // 默认 AI 选项
       activeAiProvider: 'gemini-cloud',
       geminiApiKey: '',
-      geminiModel: 'gemini-flash-lite-latest',
+      geminiModel: 'gemini-2.5-flash-lite',
       ollamaUrl: 'http://localhost:11434',
       ollamaModel: 'llama3',
 

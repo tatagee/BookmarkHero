@@ -12,11 +12,16 @@ function extractFolderPaths(tree: chrome.bookmarks.BookmarkTreeNode[]): { id: st
 
   function traverse(nodes: chrome.bookmarks.BookmarkTreeNode[], currentPath: string) {
     for (const node of nodes) {
-      if (!node.url && node.id !== '0') {
+      if (!node.url) {
+        if (node.id === '0') {
+          // Chrome 根节点（id=0）：不加入列表，但必须递归其子节点
+          if (node.children) {
+            traverse(node.children, currentPath);
+          }
+          continue;
+        }
         // Build the path string. E.g., "书签栏/开发资源"
         const nextPath = currentPath ? `${currentPath}/${node.title}` : node.title;
-        // Don't add structural roots like "书签栏" as classifiable targets if they shouldn't be
-        // But for simplicity, we add all folder paths.
         folders.push({ id: node.id, path: nextPath });
 
         if (node.children) {
@@ -96,20 +101,40 @@ export class ClassificationService {
         .map(f => f.path);
     }
 
-    const taxonomyRoots = await provider.generateTaxonomy(
-      sample, 
-      state.maxCategoryCount, 
-      state.categoryLanguage,
-      existingSeedFolders
-    );
+    // 如果启用了保留现有文件夹，且现有文件夹数量已经达到或超过了上限，
+    // 那么直接在此截断，不再调用 AI 生成大纲，只使用现有文件夹。
+    let taxonomyRoots: string[] = [];
+    if (existingSeedFolders && existingSeedFolders.length >= state.maxCategoryCount) {
+      console.log('[ClassificationService] Existing folders match or exceed limit, skipping AI taxonomy generation to enforce strict preservation.');
+      // 不收窄 cachedFolders！深度模式需要看到所有层级的子文件夹来正确判断 keep/move
+      // strictFoldersOnly + 提示词已足够阻止 AI 新建文件夹
+      console.log(`[ClassificationService] Keeping all ${this.cachedFolders?.length} cached folders as valid targets.`);
+    } else {
+      taxonomyRoots = await provider.generateTaxonomy(
+        sample, 
+        state.maxCategoryCount, 
+        state.categoryLanguage,
+        existingSeedFolders
+      );
+    }
 
     if (taxonomyRoots && taxonomyRoots.length > 0) {
-      // 核心魔改：在大纲一旦生成后，直接以此作为 cachedFolders 的全集，强制接下来的分类仅能在这些项中选择！
-      // 为这些被生成的假路径赋予一个负数的假ID，分类保存后会自动变为有效节点
-      this.cachedFolders = taxonomyRoots.map((path, idx) => ({
-        id: `virtual-${idx}`,
-        path
-      }));
+      if (options?.preserveExistingFolders && this.cachedFolders) {
+        // 保留现有真实文件夹，仅把没见过的 AI 新生成路径当作补充（赋予虚拟ID）混入
+        const existingPaths = new Set(this.cachedFolders.map(f => f.path));
+        const newVirtualFolders = taxonomyRoots
+          .filter(path => !existingPaths.has(path))
+          .map((path, idx) => ({ id: `virtual-${idx}`, path }));
+        
+        // 拼接：保持原有的文件夹原封不动，再加上新扩展出的选项
+        this.cachedFolders = [...this.cachedFolders, ...newVirtualFolders];
+      } else {
+        // 如果是不保留现有文件夹（全新整理），则完全由 AI 发挥，覆盖大纲
+        this.cachedFolders = taxonomyRoots.map((path, idx) => ({
+          id: `virtual-${idx}`,
+          path
+        }));
+      }
     }
   }
 

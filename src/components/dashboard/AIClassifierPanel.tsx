@@ -82,7 +82,7 @@ export function AIClassifierPanel() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [hasRun, setHasRun] = useState(false);
   const [includeBookmarksBar, setIncludeBookmarksBar] = useState(false);
-  const [deepConfirmData, setDeepConfirmData] = useState<{count: number, tokens: string} | null>(null);
+  const [deepConfirmData, setDeepConfirmData] = useState<{count: number, tokens: string, skipFolderConflictCheck: boolean} | null>(null);
   const [folderConflictData, setFolderConflictData] = useState<{currentCount: number, maxCount: number} | null>(null);
 
   const queueRef = useRef<ConcurrencyQueue | null>(null);
@@ -119,7 +119,7 @@ export function AIClassifierPanel() {
 
   const handleStart = async (skipConfirmCheck = false, skipFolderConflictCheck = false) => {
     // ── Pre-flight 0: 文件夹数量冲突检测（在 token 消耗确认之前） ──
-    if (scanMode === 'deep' && preserveExistingFolders && !skipFolderConflictCheck) {
+    if (preserveExistingFolders && !skipFolderConflictCheck) {
       const currentFolderCount = countCurrentFolders();
       if (currentFolderCount > maxCategoryCount) {
         setFolderConflictData({ currentCount: currentFolderCount, maxCount: maxCategoryCount });
@@ -127,8 +127,8 @@ export function AIClassifierPanel() {
       }
     }
 
-    // ── Pre-flight 1: 深度模式 Token 消耗确认 ──
-    if (scanMode === 'deep' && !skipConfirmCheck) {
+    // ── Pre-flight 1: Token 消耗确认（深度模式 或 启用保留文件夹时均需提醒） ──
+    if ((scanMode === 'deep' || preserveExistingFolders) && !skipConfirmCheck) {
       const freshTree = useBookmarkStore.getState().tree;
       const allRootNodes = freshTree[0]?.children || [];
       const rootNodes = allRootNodes.filter((node) => {
@@ -156,7 +156,7 @@ export function AIClassifierPanel() {
         }
         
         // 唤起自定义 React 确认弹窗
-        setDeepConfirmData({ count: preCollected, tokens: tokenStr });
+        setDeepConfirmData({ count: preCollected, tokens: tokenStr, skipFolderConflictCheck });
         return; 
       }
     }
@@ -224,8 +224,8 @@ export function AIClassifierPanel() {
       const service = new ClassificationService();
       await service.preloadFolders();
 
-      // === 核心：深度模式下，先进行大纲整体规划 ===
-      if (scanMode === 'deep') {
+      // === 核心：深度模式，或者启用了「保留现有分类」时，进行大纲整体规划 ===
+      if (scanMode === 'deep' || preserveExistingFolders) {
         toast.info(t('ai.deep.blueprinting'));
         await service.generateTaxonomyBlueprint(
           collected.map(item => ({ title: item.title, url: item.url })),
@@ -245,7 +245,7 @@ export function AIClassifierPanel() {
             title: item.title,
             url: item.url,
             currentPath: item.currentPath,
-          }, { mode: scanMode, strictFoldersOnly: scanMode === 'deep' });
+          }, { mode: scanMode, strictFoldersOnly: scanMode === 'deep' || preserveExistingFolders });
           results.push({ ...item, result: res });
         } catch (err) {
           console.error(`[AI整理] ${item.title} 分析失败:`, err);
@@ -497,18 +497,16 @@ export function AIClassifierPanel() {
             </button>
           </div>
 
-          {/* 保留现有文件夹开关 — 仅深度模式时显示 */}
-          {scanMode === 'deep' && (
-            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title={t('ai.preserveFoldersTip')}>
-              <input
-                type="checkbox"
-                checked={preserveExistingFolders}
-                onChange={(e) => settingsActions.setPreserveExistingFolders(e.target.checked)}
-                className="rounded border-input"
-              />
-              {t('ai.preserveFolders')}
-            </label>
-          )}
+          {/* 保留现有文件夹开关 */}
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title={t('ai.preserveFoldersTip')}>
+            <input
+              type="checkbox"
+              checked={preserveExistingFolders}
+              onChange={(e) => settingsActions.setPreserveExistingFolders(e.target.checked)}
+              className="rounded border-input"
+            />
+            {t('ai.preserveFolders')}
+          </label>
 
           {/* 书签栏保护开关 */}
           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none" title={t('ai.includeBookmarksBarTip')}>
@@ -675,7 +673,7 @@ export function AIClassifierPanel() {
               </Button>
               <Button variant="default" onClick={() => {
                 setDeepConfirmData(null);
-                handleStart(true);
+                handleStart(true, deepConfirmData.skipFolderConflictCheck);
               }}>
                 {t('ai.deep.confirmBtn')}
               </Button>
@@ -695,14 +693,22 @@ export function AIClassifierPanel() {
               {t('ai.folderConflict.message', { current: folderConflictData.currentCount, max: folderConflictData.maxCount })}
             </p>
             <div className="flex justify-end gap-3 rounded-b">
-              <Button variant="outline" onClick={() => setFolderConflictData(null)}>
-                {t('ai.deep.cancelBtn')}
+              <Button variant="ghost" onClick={() => setFolderConflictData(null)}>
+                {t('common.cancel')}
               </Button>
-              <Button variant="default" onClick={() => {
+              <Button variant="outline" onClick={() => {
+                settingsActions.setPreserveExistingFolders(false);
                 setFolderConflictData(null);
                 handleStart(false, true);
               }}>
-                {t('ai.folderConflict.confirmBtn')}
+                {t('ai.folderConflict.reorganizeBtn')}
+              </Button>
+              <Button variant="default" onClick={() => {
+                settingsActions.setMaxCategoryCount(folderConflictData.currentCount);
+                setFolderConflictData(null);
+                handleStart(false, true);
+              }}>
+                {t('ai.folderConflict.preserveBtn')}
               </Button>
             </div>
           </div>

@@ -133,8 +133,9 @@ export const zh: TranslationKeys = {
   'ai.preserveFolders': '保留当前文件夹',
   'ai.preserveFoldersTip': '勾选后 AI 将优先保留你已创建的文件夹结构，仅在不足时补充新分类',
   'ai.folderConflict.title': '文件夹数量冲突',
-  'ai.folderConflict.message': '当前有 {current} 个文件夹，但最大分类数设为 {max}。继续整理将无法保留所有现有文件夹，部分文件夹将被重新整理。',
-  'ai.folderConflict.confirmBtn': '继续整理',
+  'ai.folderConflict.message': '当前有 {current} 个分类，但您设置的最大数量为 {max}。您想自动提升上限并强制保留现有分类，还是放弃保留重新整理？',
+  'ai.folderConflict.preserveBtn': '保留当前分类',
+  'ai.folderConflict.reorganizeBtn': '重新整理',
 
   // === Folder Merge ===
   'ai.merge.running': '正在检测重复文件夹...',
@@ -163,7 +164,7 @@ export const zh: TranslationKeys = {
   'settings.gemini.keyTip': '密钥仅保存在您的浏览器本地，不会上传到我们的服务器。',
   'settings.gemini.keyLink': '获取免费 API Key',
   'settings.gemini.model': '使用模型 (Model)',
-  'settings.gemini.modelTip': '推荐使用 gemini-flash-lite-latest 或 gemini-2.5-flash。',
+  'settings.gemini.modelTip': '推荐使用 gemini-2.5-flash-lite 或 gemini-2.5-flash。',
   'settings.ollama.url': 'Ollama 服务地址',
   'settings.ollama.model': '使用模型 (Model)',
   'settings.ollama.modelTip': '需预先在终端执行 `ollama run 模型名`。推荐使用 llama3 或 qwen2。',

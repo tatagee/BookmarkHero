@@ -29,7 +29,7 @@ export class GeminiCloudProvider implements IAIProvider {
 
     try {
       const genAI = new GoogleGenerativeAI(geminiApiKey);
-      const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
+      const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-2.5-flash-lite' });
       // 发送一个最小的探测请求，真正验证 API Key 的连通性和有效性
       await model.generateContent({
         contents: [{ role: 'user', parts: [{ text: '1' }] }],
@@ -56,7 +56,7 @@ export class GeminiCloudProvider implements IAIProvider {
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
+    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-2.5-flash-lite' });
 
     const prompt = this.buildPrompt(bookmark, existingFolders, options);
 
@@ -71,7 +71,7 @@ export class GeminiCloudProvider implements IAIProvider {
       const responseText = result.response.text();
       const parsed = JSON.parse(responseText);
 
-      return this.validateResponse(parsed, existingFolders, bookmark.currentPath);
+      return this.validateResponse(parsed, existingFolders, bookmark.currentPath, options);
     } catch (error) {
       const isAuthError = error instanceof Error &&
         (error.message.includes('API_KEY') || error.message.includes('403') || error.message.includes('401'));
@@ -116,7 +116,7 @@ export class GeminiCloudProvider implements IAIProvider {
     if (folderNames.length < 2) return [];
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
+    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-2.5-flash-lite' });
 
     const prompt = `You are a semantic semantic folder matcher. You are given a list of folder names. 
 Group the folder names that have basically the exact same meaning or represent the same category (e.g. "Frontend" and "前端开发", "Design" and "UI/UX"). Consider language combinations like English and Chinese (${language || 'any'}).
@@ -152,36 +152,41 @@ ${JSON.stringify(folderNames, null, 2)}`;
     language?: string,
     existingFolders?: string[]
   ): Promise<string[]> {
-    const { geminiApiKey, geminiModel } = useSettingsStore.getState();
+    const { geminiApiKey, geminiModel, maxCategoryDepth } = useSettingsStore.getState();
     if (!geminiApiKey) {
       throw new Error('Gemini API Key is not configured.');
     }
 
     const genAI = new GoogleGenerativeAI(geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-flash-lite-latest' });
+    const model = genAI.getGenerativeModel({ model: geminiModel || 'gemini-2.5-flash-lite' });
 
     // 保留现有文件夹约束
     const preserveInstruction = existingFolders && existingFolders.length > 0
       ? `
 PRESERVE CONSTRAINT (HIGHEST PRIORITY):
-The following folders are the user's existing, curated folder structure. You MUST prioritize preserving them:
+The following folders are the user's existing, curated folder structure. You MUST prioritize preserving them exactly as they are named (Do NOT translate them):
 <existing_folders>
 ${existingFolders.map(f => `- ${f}`).join('\n')}
 </existing_folders>
 
 Rules:
-1. Include ALL of the above folders in your output (they count toward the ${maxCategories} limit).
-2. Only add NEW folders if the existing ones cannot adequately cover the bookmark topics.
-3. Total output (existing + new) MUST NOT exceed ${maxCategories}.
-4. If existing folders already equal or exceed ${maxCategories}, do NOT add new ones — you may merge synonymous existing folders if needed.
+1. REQUIRED OUTPUT: You must output ALL of the above folders exactly as they are written AND any NEW folders you suggest, in a single JSON array list.
+2. The user has chosen to PRESERVE their existing structure. Your primary job is to suggest a few NEW supplemental categories ONLY IF the existing folders cannot adequately cover the sample bookmarks.
+3. Total combined output (existing + new) MUST NOT exceed ${maxCategories}.
+4. If existing folders already equal or exceed ${maxCategories}, do NOT add new ones at all.
+5. Do NOT merge, delete, or translate the existing folders. Only append new unique folders to the list if necessary.
 `
       : '';
+
+    const depthConstraint = maxCategoryDepth === 1
+      ? `3. Return exactly a JSON array of strings, where each string is a single folder name (e.g. "Development", "Design"). **DO NOT** use nested paths like "A/B".`
+      : `3. Return exactly a JSON array of strings, where each string is a full path (e.g. "Work", "Development/Frontend"). Maximum 2 levels.`;
 
     const prompt = `You are a professional taxonomy architect. Your task is to design an optimal, high-level folder structure to organize the provided bookmarks.
 CRITICAL CONSTRAINTS:
 1. You MUST generate NO MORE THAN ${maxCategories} distinct folder paths. (Return a maximum of ${maxCategories} elements).
-2. Write folder names in: ${language === 'en' ? 'English' : 'Chinese'}
-3. Return exactly a JSON array of strings, where each string is a full path (e.g. "Work", "Development/Frontend").
+2. For NEW folders, write names in: ${language === 'en' ? 'English' : 'Chinese'}. For PRESERVED existing folders, retain their ORIGINAL language and name. DO NOT translate existing folder names (e.g. if "Shopping" is preserved, do NOT output "购物").
+${depthConstraint}
 4. Each category must be broad enough to capture related bookmarks but specific enough to be useful.
 5. Only output a valid JSON array, do not output markdown blocks or other text.
 ${preserveInstruction}
@@ -236,13 +241,20 @@ ${JSON.stringify(bookmarksSubSample.map(b => ({ t: b.title, u: b.url })), null, 
 
     // 语言控制指令
     const langInstruction = categoryLanguage === 'en'
-      ? 'LANGUAGE RULE: All new folder names and paths MUST be in English (e.g., "Development/Frontend", "Online Tools"). Existing folder names should remain unchanged.'
-      : '语言规则：所有新建文件夹名称必须使用中文（如："开发资源/前端"、"在线工具"）。已有文件夹的名称保持不变。';
+      ? 'LANGUAGE RULE: All NEW folder names and paths MUST be in English. For EXISTING folders from the <folders> list, DO NOT translate them, you must keep their original language and exact name.'
+      : '语言规则：所有【新建】的文件夹名称必须使用中文。对于 <folders> 列表中【已存在】的文件夹，保留其原始语言，绝对禁止任何形式的翻译或重命名！';
 
-    // 分类数量约束
-    const categoryConstraint = categoryLanguage === 'en'
-      ? 'CATEGORY RULE: Keep total top-level categories within 15-20 broad themes (e.g., Development, Design, Tools, Learning, Entertainment). Avoid overly granular sub-categories.'
-      : '分类规则：总分类应控制在 15-20 个宏观大类之内（如：开发资源、设计素材、在线工具、学习笔记、娱乐休闲等），避免创建过于琐碎的微分类。';
+    // 分类数量约束（Strict 模式下替换为强化版，禁止新建）
+    let categoryConstraint: string;
+    if (options?.strictFoldersOnly) {
+      categoryConstraint = categoryLanguage === 'en'
+        ? 'CATEGORY RULE: DO NOT create any new categories. You may ONLY use the exact folder paths listed in <folders>. Pick the single best match.'
+        : '分类规则：禁止创建任何新分类。你只能使用 <folders> 列表中已有的精确路径。请挑选一个最佳匹配。';
+    } else {
+      categoryConstraint = categoryLanguage === 'en'
+        ? 'CATEGORY RULE: Keep total top-level categories within 15-20 broad themes (e.g., Development, Design, Tools, Learning, Entertainment). Avoid overly granular sub-categories.'
+        : '分类规则：总分类应控制在 15-20 个宏观大类之内（如：开发资源、设计素材、在线工具、学习笔记、娱乐休闲等），避免创建过于琐碎的微分类。';
+    }
 
     // 根目录约束（使用 Chrome 实际返回的根文件夹名称，而非按语言设置猜测）
     const rootConstraint = categoryLanguage === 'en'
@@ -253,12 +265,12 @@ ${JSON.stringify(bookmarksSubSample.map(b => ({ t: b.title, u: b.url })), null, 
     let reuseConstraint = '';
     if (options?.strictFoldersOnly) {
       reuseConstraint = categoryLanguage === 'en'
-        ? 'STRICT ASSIGNMENT RULE (HIGHEST PRIORITY): You MUST ONLY choose an exact folder path from the <folders> list below. YOU ARE STRICTLY FORBIDDEN from creating any new folders. If no folder is perfect, pick the closest one.'
-        : '严格分类规则（最高优先级）：你必须且只能从下面的 <folders> 列表中挑选一个精确的分类路径。绝对禁止创建任何新文件夹！如果没有完美的分类，请挑选最接近的一个。';
+        ? 'STRICT ASSIGNMENT RULE (HIGHEST PRIORITY): You MUST ONLY choose an exact folder path from the <folders> list below. YOU ARE STRICTLY FORBIDDEN from creating any new folders. EXACT MATCH REQUIRED. DO NOT TRANSLATE existing folder names even if they are in another language.'
+        : '严格分类规则（最高优先级）：你必须且只能从下面的 <folders> 列表中挑选一个精确的分类路径。绝对禁止创建任何新文件夹！【关键】：必须输出与 <folders> 列表中一字不差的完整路径，**绝对不可翻译**原有文件夹的名称！哪怕分类语言不同！';
     } else {
       reuseConstraint = categoryLanguage === 'en'
-        ? 'REUSE RULE (HIGHEST PRIORITY): 1. You MUST prioritize choosing an existing folder from the <folders> list. 2. Only suggest a new folder path if absolutely no existing folder matches the semantics. 3. DO NOT create new synonymous folders (e.g. if "Tools" exists, do not create "Online Tools", reuse "Tools").'
-        : '复用规则（最高优先级）：1. 你必须优先从 <folders> 列表中选择已有文件夹。2. 只有当现有文件夹中确实没有任何语义匹配的选项时，才可建议新路径。3. 强烈禁止创建已有文件夹的近义词（如果已有 "工具"，请复用它，不要新建 "在线工具"）。';
+        ? 'REUSE RULE (HIGHEST PRIORITY): 1. You MUST prioritize choosing an existing folder from the <folders> list, REGARDLESS of whether the existing folder name is in English, Chinese, or any other language. 2. Only suggest a NEW folder path if absolutely no existing folder matches the semantics. 3. DO NOT create new synonymous folders (e.g. if "购物" exists but you want English, do NOT create "Shopping", just reuse "购物").'
+        : '复用已有文件夹规则（最高优先级）：1. 你必须优先从 <folders> 列表中将书签分类到语义相符的已有文件夹中，【无论该已有文件夹是中文还是英文】。2. 如果已有文件夹（如 "Shopping"）与所属分类（如 "购物"）语义一致，绝对禁止新建 "购物" 文件夹，必须直接复用 "Shopping" 的完整路径。3. 只有当现有文件夹中完全没有任何语义匹配的选项时，才可按照【语言规则】建议新的路径。';
     }
 
     // 层数约束指令（用实际的 otherBookmarksName 作为示例路径）
@@ -318,9 +330,11 @@ ${currentLocation}
 </bookmark>
 
 请你做出以下判断：
-${isDeepMode 
-  ? '1. 如果当前位置合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径\n2. 如果当前分类明显错误或未分类 → action 设为 "move"，suggestedFolderPath 必须优先从已有文件夹挑' 
-  : '1. 如果当前位置已经合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径\n2. 如果当前位置不合理（未分类、或放错了文件夹）→ action 设为 "move"，suggestedFolderPath 设为你建议的最佳路径（优先从已有文件夹中选，必要时可建议新路径）'}
+${options?.strictFoldersOnly
+  ? '1. 如果当前位置合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径\n2. 如果当前分类明显错误或未分类 → action 设为 "move"，suggestedFolderPath 必须且只能从 <folders> 列表中挑选一个精确的已有分类路径，绝对禁止新建！'
+  : (isDeepMode 
+      ? '1. 如果当前位置合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径\n2. 如果当前分类明显错误或未分类 → action 设为 "move"，suggestedFolderPath 必须优先从已有文件夹挑' 
+      : '1. 如果当前位置已经合理 → action 设为 "keep"，suggestedFolderPath 设为当前路径\n2. 如果当前位置不合理（未分类、或放错了文件夹）→ action 设为 "move"，suggestedFolderPath 设为你建议的最佳路径（优先从已有文件夹中选，必要时可建议新路径）')}
 
 请以 JSON 格式返回，包含以下字段：
 - action: "keep" 或 "move"
@@ -342,7 +356,8 @@ ${exampleKeep}`;
   private validateResponse(
     parsed: Record<string, unknown>,
     folders: { id: string; path: string }[],
-    currentPath?: string
+    currentPath?: string,
+    options?: { strictFoldersOnly?: boolean }
   ): ClassificationResult {
     let action: 'keep' | 'move' = parsed.action === 'keep' ? 'keep' : 'move';
     let suggestedFolderPath = (parsed.suggestedFolderPath as string) || '';
@@ -375,6 +390,13 @@ ${exampleKeep}`;
       }
     }
 
+    // 【自动纠偏】如果 AI 说 "move"，但建议路径和当前路径一致，自动纠正为 "keep"
+    if (action === 'move' && currentPath && suggestedFolderPath) {
+      if (suggestedFolderPath === currentPath || matchedFolder?.path === currentPath) {
+        action = 'keep';
+      }
+    }
+
     // 如果 action 是 keep，使用当前路径对应的 folder
     let finalFolderId: string;
     if (action === 'keep' && currentPath) {
@@ -382,6 +404,18 @@ ${exampleKeep}`;
       finalFolderId = currentFolder ? currentFolder.id : 'keep';
     } else {
       finalFolderId = matchedFolder ? matchedFolder.id : 'fallback_id_or_create_new';
+      
+      // 【兜底熔断阀】：如果是 Strict 强制复用模式，且找了一圈没匹配上任何已知 Folder
+      if (options?.strictFoldersOnly && finalFolderId === 'fallback_id_or_create_new') {
+        console.warn(`[GeminiCloud] Strict mode violation! AI suggested unknown folder: ${suggestedFolderPath}. Forcing fallback to existing folder.`);
+        if (folders.length > 0) {
+          // 找一个非根目录的 folder 当垃圾桶垫底，没得选就选第一个
+          const fallbackFolder = folders.find(f => (f.id !== '1' && f.id !== '2')) || folders[0];
+          matchedFolder = fallbackFolder;
+          finalFolderId = fallbackFolder.id;
+          suggestedFolderPath = fallbackFolder.path;
+        }
+      }
     }
 
     return {

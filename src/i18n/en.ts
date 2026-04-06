@@ -133,8 +133,9 @@ export const en: TranslationKeys = {
   'ai.preserveFolders': 'Preserve existing folders',
   'ai.preserveFoldersTip': 'AI will prioritize keeping your existing folder structure, only adding new categories when needed',
   'ai.folderConflict.title': 'Folder Count Conflict',
-  'ai.folderConflict.message': 'You currently have {current} folders, but the max is set to {max}. Continuing will reorganize some existing folders.',
-  'ai.folderConflict.confirmBtn': 'Continue Anyway',
+  'ai.folderConflict.message': 'You currently have {current} folders, but the max is {max}. Do you want to increase the limit and preserve them, or discard them and reorganize?',
+  'ai.folderConflict.preserveBtn': 'Preserve Folders',
+  'ai.folderConflict.reorganizeBtn': 'Reorganize',
 
   // === Folder Merge ===
   'ai.merge.running': 'Detecting duplicate folders...',
@@ -163,7 +164,7 @@ export const en: TranslationKeys = {
   'settings.gemini.keyTip': 'Keys are stored locally in your browser and never uploaded.',
   'settings.gemini.keyLink': 'Get a Free API Key',
   'settings.gemini.model': 'Model Name',
-  'settings.gemini.modelTip': 'We recommend gemini-flash-lite-latest or gemini-2.5-flash.',
+  'settings.gemini.modelTip': 'We recommend gemini-2.5-flash-lite or gemini-2.5-flash.',
   'settings.ollama.url': 'Ollama Service URL',
   'settings.ollama.model': 'Model Name',
   'settings.ollama.modelTip': 'Ensure `ollama run <model>` is active in terminal. Recommend llama3 or qwen2.',

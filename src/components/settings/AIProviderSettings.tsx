@@ -58,9 +58,9 @@ export function AIProviderSettings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-      {/* ──────────────── 上半部分：模型连接 ──────────────── */}
+      {/* ──────────────── 左侧：模型连接 ──────────────── */}
       <div className="bg-card border rounded-lg p-6">
         <h4 className="text-sm font-semibold flex items-center gap-2 mb-5">
           <Settings2 className="w-4 h-4 text-primary" />
@@ -106,7 +106,7 @@ export function AIProviderSettings() {
                   }
                 }}
                 placeholder="YOUR_API_KEY"
-                className={`w-full sm:max-w-md flex h-9 rounded-md border ${valErrors.geminiKey ? 'border-destructive' : 'border-input'} bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
+                className={`w-full flex h-9 rounded-md border ${valErrors.geminiKey ? 'border-destructive' : 'border-input'} bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
               />
               {valErrors.geminiKey && <p className="text-xs text-destructive mt-1">{valErrors.geminiKey}</p>}
               <p className="text-xs text-muted-foreground mt-2">
@@ -119,8 +119,8 @@ export function AIProviderSettings() {
                 type="text" 
                 value={settings.geminiModel} 
                 onChange={(e) => actions.setGeminiModel(e.target.value)}
-                placeholder="gemini-flash-lite-latest"
-                className="w-full sm:max-w-xs flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="gemini-2.5-flash-lite"
+                className="w-full flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground mt-2">
                 {t('settings.gemini.modelTip')}
@@ -147,7 +147,7 @@ export function AIProviderSettings() {
                   }
                 }}
                 placeholder="http://localhost:11434"
-                className={`w-full sm:max-w-md flex h-9 rounded-md border ${valErrors.ollamaUrl ? 'border-destructive' : 'border-input'} bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
+                className={`w-full flex h-9 rounded-md border ${valErrors.ollamaUrl ? 'border-destructive' : 'border-input'} bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring`}
               />
               {valErrors.ollamaUrl && <p className="text-xs text-destructive mt-1">{valErrors.ollamaUrl}</p>}
             </div>
@@ -158,7 +158,7 @@ export function AIProviderSettings() {
                 value={settings.ollamaModel} 
                 onChange={(e) => actions.setOllamaModel(e.target.value)}
                 placeholder="llama3"
-                className="w-full sm:max-w-xs flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="w-full flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground mt-2">
                 {t('settings.ollama.modelTip')}
@@ -195,7 +195,7 @@ export function AIProviderSettings() {
         </div>
       </div>
 
-      {/* ──────────────── 下半部分：分类偏好 ──────────────── */}
+      {/* ──────────────── 右侧：分类偏好 ──────────────── */}
       <div className="bg-card border rounded-lg p-6">
         <h4 className="text-sm font-semibold flex items-center gap-2 mb-5">
           <Sliders className="w-4 h-4 text-primary" />
